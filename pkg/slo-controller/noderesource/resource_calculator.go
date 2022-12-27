@@ -18,15 +18,16 @@ package noderesource
 
 import (
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	quotav1 "k8s.io/apiserver/pkg/quota/v1"
+	"strconv"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
 	slov1alpha1 "github.com/koordinator-sh/koordinator/apis/slo/v1alpha1"
 	"github.com/koordinator-sh/koordinator/pkg/slo-controller/config"
 	"github.com/koordinator-sh/koordinator/pkg/util"
+	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 )
 
 // calculateBEResource calculate BE resource using the formula below
@@ -78,8 +79,11 @@ func (r *NodeResourceReconciler) calculateBEResource(node *corev1.Node,
 	nodeUsage := r.getNodeMetricUsage(nodeMetric.Status.NodeMetric)
 	systemUsed := quotav1.Max(quotav1.Subtract(nodeUsage, podAllUsed), util.NewZeroResourceList())
 
+	// specific cpus reserved by annotation of node.
+	cpusReservedByNodeAnno, _ := r.GetCPUsReservedByNodeAnno(node.Annotations)
+
 	nodeAllocatableBE, message := r.calculateBEResourceByPolicy(node, nodeAllocatable, nodeReservation, systemUsed,
-		podLSRequest, podLSUsed)
+		podLSRequest, podLSUsed, cpusReservedByNodeAnno)
 
 	return &nodeBEResource{
 		// transform cores into milli-cores
@@ -88,6 +92,36 @@ func (r *NodeResourceReconciler) calculateBEResource(node *corev1.Node,
 		IsColocationAvailable: true,
 		Message:               message,
 	}
+}
+
+// GetCPUsReservedByNodeAnno gets reserved cpus by annotation of node.
+func (r *NodeResourceReconciler) GetCPUsReservedByNodeAnno(anno map[string]string) (corev1.ResourceList, error) {
+	rl := make(corev1.ResourceList)
+
+	convert := func(k, v string) (corev1.ResourceList, error) {
+		q, err := resource.ParseQuantity(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse quantity %q for %q resource: %w", v, k, err)
+		}
+		if q.Sign() == -1 {
+			return nil, fmt.Errorf("resource quantity for %q cannot be negative: %v", k, v)
+		}
+		rl[corev1.ResourceName(k)] = q
+
+		return rl, nil
+	}
+
+	if reservedVal, ok := anno[extension.CPUsReservedByNode]; ok {
+		reservedCPUs := "0"
+		cpus, err := cpuset.ParseCPUSetStr(reservedVal)
+		if err == nil && cpus != nil {
+			reservedCPUs = strconv.Itoa(len(cpus))
+		}
+
+		return convert("cpu", reservedCPUs)
+	}
+
+	return rl, nil
 }
 
 // getPodMetricUsage gets pod usage from the PodMetricInfo
@@ -135,16 +169,16 @@ func (r *NodeResourceReconciler) getReserveRatio(reclaimThreshold int64) float64
 }
 
 func (r *NodeResourceReconciler) calculateBEResourceByPolicy(node *corev1.Node,
-	nodeAllocatable, nodeReserve, systemUsed, podLSReq, podLSUsed corev1.ResourceList) (corev1.ResourceList, string) {
+	nodeAllocatable, nodeReserve, systemUsed, podLSReq, podLSUsed, cpusReservedByNodeAnno corev1.ResourceList) (corev1.ResourceList, string) {
 	strategy := config.GetNodeColocationStrategy(r.cfgCache.GetCfgCopy(), node)
 
-	// Node(BE).Alloc = Node.Total - Node.Reserved - System.Used - Pod(LS).Used
-	beAllocatableByUsage := quotav1.Max(quotav1.Subtract(quotav1.Subtract(quotav1.Subtract(nodeAllocatable, nodeReserve),
-		systemUsed), podLSUsed), util.NewZeroResourceList())
+	// Node(BE).Alloc = Node.Total - Node.Reserved - node.anno.Reserved - System.Used - Pod(LS).Used
+	beAllocatableByUsage := quotav1.Max(quotav1.Subtract(quotav1.Subtract(quotav1.Subtract(quotav1.Subtract(nodeAllocatable, nodeReserve),
+		cpusReservedByNodeAnno), systemUsed), podLSUsed), util.NewZeroResourceList())
 
-	// Node(BE).Alloc = Node.Total - Node.Reserved - Pod(LS).Request
-	beAllocatableByRequest := quotav1.Max(quotav1.Subtract(quotav1.Subtract(nodeAllocatable, nodeReserve),
-		podLSReq), util.NewZeroResourceList())
+	// Node(BE).Alloc = Node.Total - Node.Reserved - node.anno.Reserved - Pod(LS).Request
+	beAllocatableByRequest := quotav1.Max(quotav1.Subtract(quotav1.Subtract(quotav1.Subtract(nodeAllocatable, nodeReserve),
+		cpusReservedByNodeAnno), podLSReq), util.NewZeroResourceList())
 
 	beAllocatable := beAllocatableByUsage
 	cpuMsg := fmt.Sprintf("nodeAllocatableBE[CPU(Milli-Core)]:%v = nodeAllocatable:%v - nodeReservation:%v - systemUsage:%v - podLSUsed:%v",

@@ -18,7 +18,7 @@ package extension
 
 import (
 	"encoding/json"
-
+	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -125,7 +125,43 @@ func GetNodeCPUSharePools(nodeTopoAnnotations map[string]string) ([]CPUSharedPoo
 	if err != nil {
 		return nil, err
 	}
+
+	//cpusReserved := ""
+	//if val, ok := nodeAnno[CPUsReservedByNode]; ok {
+	//	cpusReserved = val
+	//}
+	//
+	//cpuSharePools = filterOutCpusByNodeAnno(cpuSharePools, cpusReserved)
+
 	return cpuSharePools, nil
+}
+
+// filterOutCpusByNodeAnno filter out cpus that reserved by annotation of node.
+func filterOutCpusByNodeAnno(cpuSharePools []CPUSharedPool, cpusReservedByNodeAnno string) []CPUSharedPool {
+	if cpusReservedByNodeAnno == "" {
+		return cpuSharePools
+	}
+
+	newCPUSharePools := make([]CPUSharedPool, len(cpuSharePools))
+	for idx, val := range cpuSharePools {
+		newCPUSharePools[idx] = val
+	}
+
+	for idx, pool := range cpuSharePools {
+		originCPUs, err := cpuset.Parse(pool.CPUSet)
+		if err != nil {
+			return newCPUSharePools
+		}
+
+		reservedCPUs, err := cpuset.Parse(cpusReservedByNodeAnno)
+		if err != nil {
+			return newCPUSharePools
+		}
+
+		newCPUSharePools[idx].CPUSet = originCPUs.Difference(reservedCPUs).String()
+	}
+
+	return newCPUSharePools
 }
 
 func GetKubeletCPUManagerPolicy(annotations map[string]string) (*KubeletCPUManagerPolicy, error) {

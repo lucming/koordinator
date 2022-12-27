@@ -18,6 +18,7 @@ package cpuset
 
 import (
 	"fmt"
+	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 	"sync"
 
 	"k8s.io/klog/v2"
@@ -89,25 +90,52 @@ func (p *cpusetPlugin) SetContainerCPUSet(proto protocol.HooksProtocol) error {
 	}
 	containerReq := containerCtx.Request
 
-	// cpuset from pod annotation (LSE, LSR)
-	if cpusetVal, err := util.GetCPUSetFromPod(containerReq.PodAnnotations); err != nil {
-		return err
-	} else if cpusetVal != "" {
-		containerCtx.Response.Resources.CPUSet = pointer.StringPtr(cpusetVal)
-		return nil
-	}
-
 	// use cpushare pool for pod
 	r := p.getRule()
 	if r == nil {
 		klog.V(5).Infof("hook plugin rule is nil, nothing to do for plugin %v", name)
 		return nil
 	}
+
+	// cpuset from pod annotation (LSE, LSR)
+	if cpusetVal, err := util.GetCPUSetFromPod(containerReq.PodAnnotations); err != nil {
+		return err
+	} else if cpusetVal != "" {
+		//if err := cpusetAppliedByPodIsValid(r.sharePools, cpusetVal); err != nil {
+		//	return err
+		//}
+		containerCtx.Response.Resources.CPUSet = pointer.StringPtr(cpusetVal)
+		return nil
+	}
+
 	cpusetValue, err := r.getContainerCPUSet(&containerReq)
 	if err != nil {
 		return err
 	}
 	containerCtx.Response.Resources.CPUSet = cpusetValue
+	return nil
+}
+
+// cpusetAppliedByPodIsValid judge cpus applied by pod is reserved or not.
+func cpusetAppliedByPodIsValid(CPUPools []apiext.CPUSharedPool, cpusSpecificByPod string) error {
+	cpus, err := cpuset.ParseCPUSetStr(cpusSpecificByPod)
+	if err != nil {
+		return err
+	}
+
+	for _, pool := range CPUPools {
+		cpusetInPool, err := cpuset.Parse(pool.CPUSet)
+		if err != nil {
+			continue
+		}
+
+		for _, cpu := range cpus {
+			if !cpusetInPool.Contains(int(cpu)) {
+				return fmt.Errorf("%d is reserved by node.", cpu)
+			}
+		}
+	}
+
 	return nil
 }
 

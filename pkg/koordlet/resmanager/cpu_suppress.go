@@ -17,6 +17,7 @@ limitations under the License.
 package resmanager
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -320,10 +321,27 @@ func (r *CPUSuppress) adjustByCPUSet(cpusetQuantity *resource.Quantity, nodeCPUI
 			cpuIdToPool[int32(cpuID)] = apiext.GetPodQoSClass(podMeta.Pod)
 		}
 	}
+
+	topo := r.resmanager.statesInformer.GetNodeTopo()
+	cpuManagerPolicy := apiext.KubeletCPUManagerPolicy{}
+	if policy, ok := topo.Annotations[apiext.AnnotationKubeletCPUManagerPolicy]; ok {
+		if err := json.Unmarshal([]byte(policy), cpuManagerPolicy); err != nil {
+			return
+		}
+	}
+	reserved, err := cpuset.Parse(cpuManagerPolicy.ReservedCPUs)
+	if err != nil {
+		return
+	}
+
 	var lsrCpus []koordletutil.ProcessorInfo
 	var lsCpus []koordletutil.ProcessorInfo
 	// FIXME: be pods might be starved since lse pods can run out of all cpus
 	for _, processor := range nodeCPUInfo.ProcessorInfos {
+		cpuset := cpuset.NewCPUSet(int(processor.CPUID))
+		if cpuset.IsSubsetOf(reserved) {
+			continue
+		}
 		if cpuIdToPool[processor.CPUID] == apiext.QoSLSR {
 			lsrCpus = append(lsrCpus, processor)
 		} else if cpuIdToPool[processor.CPUID] != apiext.QoSLSE {

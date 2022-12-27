@@ -135,28 +135,26 @@ func GetResourceSpec(annotations map[string]string) (*ResourceSpec, error) {
 	resourceSpec := &ResourceSpec{
 		PreferredCPUBindPolicy: CPUBindPolicyDefault,
 	}
-	data, ok := annotations[AnnotationResourceSpec]
-	if !ok {
-		return resourceSpec, nil
+
+	if data, ok := annotations[AnnotationResourceSpec]; ok {
+		if err := json.Unmarshal([]byte(data), resourceSpec); err != nil {
+			return nil, err
+		}
 	}
-	err := json.Unmarshal([]byte(data), resourceSpec)
-	if err != nil {
-		return nil, err
-	}
+
 	return resourceSpec, nil
 }
 
 // GetResourceStatus parses ResourceStatus from annotations
 func GetResourceStatus(annotations map[string]string) (*ResourceStatus, error) {
 	resourceStatus := &ResourceStatus{}
-	data, ok := annotations[AnnotationResourceStatus]
-	if !ok {
-		return resourceStatus, nil
+
+	if data, ok := annotations[AnnotationResourceStatus]; ok {
+		if err := json.Unmarshal([]byte(data), resourceStatus); err != nil {
+			return nil, err
+		}
 	}
-	err := json.Unmarshal([]byte(data), resourceStatus)
-	if err != nil {
-		return nil, err
-	}
+
 	return resourceStatus, nil
 }
 
@@ -198,14 +196,13 @@ func GetExtendedResourceSpec(annotations map[string]string) (*ExtendedResourceSp
 	if annotations == nil {
 		return spec, nil
 	}
-	data, ok := annotations[AnnotationExtendedResourceSpec]
-	if !ok {
-		return spec, nil
+
+	if data, ok := annotations[AnnotationExtendedResourceSpec]; ok {
+		if err := json.Unmarshal([]byte(data), spec); err != nil {
+			return nil, err
+		}
 	}
-	err := json.Unmarshal([]byte(data), spec)
-	if err != nil {
-		return nil, err
-	}
+
 	return spec, nil
 }
 

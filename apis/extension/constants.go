@@ -31,4 +31,6 @@ const (
 	LabelPodPriority = DomainPrefix + "priority"
 
 	LabelManagedBy = "app.kubernetes.io/managed-by"
+
+	CPUsReservedByNode = DomainPrefix + "cpus-reserved"
 )

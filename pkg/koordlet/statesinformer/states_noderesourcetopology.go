@@ -172,6 +172,22 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 		}
 	}
 
+	// handle cpus reserved by annotation of node.
+	node := s.nodeInformer.GetNode()
+	if reservedVal, ok := node.Annotations[extension.CPUsReservedByNode]; ok && reservedVal != "" {
+		CPUsReservedBykubelet, err := cpuset.Parse(cpuManagerPolicy.ReservedCPUs)
+		if err != nil {
+			return nil, err
+		}
+
+		CPUsReservedByNode, err := cpuset.Parse(reservedVal)
+		if err != nil {
+			return nil, err
+		}
+
+		cpuManagerPolicy.ReservedCPUs = CPUsReservedBykubelet.Union(CPUsReservedByNode).String()
+	}
+
 	cpuManagerPolicyJSON, err := json.Marshal(cpuManagerPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal cpu manager policy, err: %v", err)

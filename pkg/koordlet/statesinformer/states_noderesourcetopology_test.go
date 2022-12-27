@@ -243,6 +243,7 @@ func Test_reportNodeTopology(t *testing.T) {
 	testNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
+			Annotations: map[string]string{extension.CPUsReservedByNode:"4"},
 		},
 	}
 
@@ -311,7 +312,7 @@ func Test_reportNodeTopology(t *testing.T) {
 			},
 			expectedKubeletCPUManagerPolicy: extension.KubeletCPUManagerPolicy{
 				Policy:       "static",
-				ReservedCPUs: "0-1",
+				ReservedCPUs: "0-1,4",
 			},
 			expectedCPUSharedPool: expectedCPUSharedPool,
 			expectedCPUTopology:   expectedCPUTopology,
@@ -331,7 +332,7 @@ func Test_reportNodeTopology(t *testing.T) {
 			},
 			expectedKubeletCPUManagerPolicy: extension.KubeletCPUManagerPolicy{
 				Policy:       "",
-				ReservedCPUs: "",
+				ReservedCPUs: "4",
 			},
 			expectedCPUSharedPool: expectedCPUSharedPool,
 			expectedCPUTopology:   expectedCPUTopology,
@@ -350,7 +351,7 @@ func Test_reportNodeTopology(t *testing.T) {
 			},
 			expectedKubeletCPUManagerPolicy: extension.KubeletCPUManagerPolicy{
 				Policy:       "static",
-				ReservedCPUs: "0-1",
+				ReservedCPUs: "0-1,4",
 			},
 			expectedCPUSharedPool: expectedCPUSharedPool,
 			expectedCPUTopology:   expectedCPUTopology,
