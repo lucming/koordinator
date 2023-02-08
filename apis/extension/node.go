@@ -18,8 +18,13 @@ package extension
 
 import (
 	"encoding/json"
-	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
+
+	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 )
 
 const (
@@ -89,6 +94,15 @@ type KubeletCPUManagerPolicy struct {
 	ReservedCPUs string            `json:"reservedCPUs,omitempty"`
 }
 
+type KoordReserved struct {
+	// resources need to be reserved. like, {"cpu":"1C", "memory":"2Gi"}
+	ReservedResources corev1.ResourceList `json:"reservedResources"`
+	// specific cpus need to be reserved, such as 1-6, or 2,4,6,8
+	ReservedCPUs string `json:"reservedCPUs"`
+	// Which qos need to be aware of these reserved resources.
+	QOSEffected []QoSClass `json:"QOSEffected"`
+}
+
 func GetCPUTopology(annotations map[string]string) (*CPUTopology, error) {
 	topology := &CPUTopology{}
 	data, ok := annotations[AnnotationNodeCPUTopology]
@@ -126,12 +140,12 @@ func GetNodeCPUSharePools(nodeTopoAnnotations map[string]string) ([]CPUSharedPoo
 		return nil, err
 	}
 
-	//cpusReserved := ""
-	//if val, ok := nodeAnno[CPUsReservedByNode]; ok {
-	//	cpusReserved = val
-	//}
-	//
-	//cpuSharePools = filterOutCpusByNodeAnno(cpuSharePools, cpusReserved)
+	cpusReserved := ""
+	if val, ok := nodeTopoAnnotations[CPUsReservedByNode]; ok {
+		cpusReserved = val
+	}
+
+	cpuSharePools = filterOutCpusByNodeAnno(cpuSharePools, cpusReserved)
 
 	return cpuSharePools, nil
 }
@@ -147,13 +161,13 @@ func filterOutCpusByNodeAnno(cpuSharePools []CPUSharedPool, cpusReservedByNodeAn
 		newCPUSharePools[idx] = val
 	}
 
+	reservedCPUs, err := cpuset.Parse(cpusReservedByNodeAnno)
+	if err != nil {
+		return newCPUSharePools
+	}
+
 	for idx, pool := range cpuSharePools {
 		originCPUs, err := cpuset.Parse(pool.CPUSet)
-		if err != nil {
-			return newCPUSharePools
-		}
-
-		reservedCPUs, err := cpuset.Parse(cpusReservedByNodeAnno)
 		if err != nil {
 			return newCPUSharePools
 		}
@@ -188,4 +202,26 @@ func GetNodeCPUBindPolicy(nodeLabels map[string]string, kubeletCPUPolicy *Kubele
 		return nodeCPUBindPolicy
 	}
 	return NodeCPUBindPolicyNone
+}
+
+func GetCPUsReservedByNode(reserved string) (resource.Quantity, []QoSClass) {
+	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
+	reservedObj := KoordReserved{}
+	qos := []QoSClass{}
+
+	if err := json.Unmarshal([]byte(reserved), &reservedObj); err != nil {
+		klog.Errorf("Failed to unmarshal cpus reserved by node annotation. err=%v.\n", err)
+		return cpuReservedByNode, qos
+	}
+
+	if reservedcpu, ok := reservedObj.ReservedResources[corev1.ResourceCPU]; ok {
+		cpuReservedByNode = reservedcpu
+	}
+	if reservedObj.ReservedCPUs != "" {
+		if cpus, err := cpuset.Parse(reservedObj.ReservedCPUs); err == nil {
+			cpuReservedByNode = resource.MustParse(string(cpus.Size()))
+		}
+	}
+
+	return cpuReservedByNode, reservedObj.QOSEffected
 }

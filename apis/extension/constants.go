@@ -32,5 +32,6 @@ const (
 
 	LabelManagedBy = "app.kubernetes.io/managed-by"
 
-	CPUsReservedByNode = DomainPrefix + "cpus-reserved"
+	ReservedByNode     = DomainPrefix + "reserved"
+	CPUsReservedByNode = DomainPrefix + "reserved-cpus"
 )

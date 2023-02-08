@@ -140,12 +140,18 @@ func (r *CPUSuppress) calculateBESuppressCPU(node *corev1.Node, nodeMetric *metr
 		systemUsedCPU = *resource.NewMilliQuantity(0, resource.DecimalSI)
 	}
 
-	// suppress(BE) := node.Total * SLOPercent - pod(LS).Used - system.Used
+	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
+	if reserved, ok := node.Annotations[apiext.ReservedByNode]; ok {
+		cpuReservedByNode, _ = apiext.GetCPUsReservedByNode(reserved)
+	}
+
+	// suppress(BE) := node.Total * SLOPercent - pod(LS).Used - system.Used - reservedByNodeAnno
 	// NOTE: valid milli-cpu values should not larger than 2^20, so there is no overflow during the calculation
 	nodeBESuppressCPU := resource.NewMilliQuantity(node.Status.Allocatable.Cpu().MilliValue()*beCPUUsedThreshold/100,
 		node.Status.Allocatable.Cpu().Format)
 	nodeBESuppressCPU.Sub(podLSUsedCPU)
 	nodeBESuppressCPU.Sub(systemUsedCPU)
+	nodeBESuppressCPU.Sub(cpuReservedByNode)
 	metrics.RecordBESuppressLSUsedCPU(float64(podLSUsedCPU.MilliValue()) / 1000)
 	klog.Infof("nodeSuppressBE[CPU(Core)]:%v = node.Total:%v * SLOPercent:%v%% - systemUsage:%v - podLSUsed:%v\n",
 		nodeBESuppressCPU.Value(), node.Status.Allocatable.Cpu().Value(), beCPUUsedThreshold, systemUsedCPU.Value(),
@@ -330,12 +336,23 @@ func (r *CPUSuppress) adjustByCPUSet(cpusetQuantity *resource.Quantity, nodeCPUI
 		return
 	}
 
+	reservedByNode := cpuset.CPUSet{}
+	if cpus, ok := topo.Annotations[apiext.CPUsReservedByNode]; ok {
+		reservedByNode, err = cpuset.Parse(cpus)
+		if err != nil {
+			return
+		}
+	}
+
 	var lsrCpus []koordletutil.ProcessorInfo
 	var lsCpus []koordletutil.ProcessorInfo
 	// FIXME: be pods might be starved since lse pods can run out of all cpus
 	for _, processor := range nodeCPUInfo.ProcessorInfos {
 		cpuset := cpuset.NewCPUSet(int(processor.CPUID))
 		if cpuset.IsSubsetOf(reserved) {
+			continue
+		}
+		if cpuset.IsSubsetOf(reservedByNode) {
 			continue
 		}
 		if cpuIdToPool[processor.CPUID] == apiext.QoSLSR {

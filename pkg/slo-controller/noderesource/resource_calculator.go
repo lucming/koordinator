@@ -18,16 +18,15 @@ package noderesource
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	quotav1 "k8s.io/apiserver/pkg/quota/v1"
-	"strconv"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
 	slov1alpha1 "github.com/koordinator-sh/koordinator/apis/slo/v1alpha1"
 	"github.com/koordinator-sh/koordinator/pkg/slo-controller/config"
 	"github.com/koordinator-sh/koordinator/pkg/util"
-	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 )
 
 // calculateBEResource calculate BE resource using the formula below
@@ -98,29 +97,12 @@ func (r *NodeResourceReconciler) calculateBEResource(node *corev1.Node,
 func (r *NodeResourceReconciler) GetCPUsReservedByNodeAnno(anno map[string]string) (corev1.ResourceList, error) {
 	rl := make(corev1.ResourceList)
 
-	convert := func(k, v string) (corev1.ResourceList, error) {
-		q, err := resource.ParseQuantity(v)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse quantity %q for %q resource: %w", v, k, err)
-		}
-		if q.Sign() == -1 {
-			return nil, fmt.Errorf("resource quantity for %q cannot be negative: %v", k, v)
-		}
-		rl[corev1.ResourceName(k)] = q
-
-		return rl, nil
+	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
+	if reserved, ok := anno[extension.ReservedByNode]; ok {
+		cpuReservedByNode, _ = extension.GetCPUsReservedByNode(reserved)
 	}
 
-	if reservedVal, ok := anno[extension.CPUsReservedByNode]; ok {
-		reservedCPUs := "0"
-		cpus, err := cpuset.ParseCPUSetStr(reservedVal)
-		if err == nil && cpus != nil {
-			reservedCPUs = strconv.Itoa(len(cpus))
-		}
-
-		return convert("cpu", reservedCPUs)
-	}
-
+	rl[corev1.ResourceCPU] = cpuReservedByNode
 	return rl, nil
 }
 

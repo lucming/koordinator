@@ -32,6 +32,7 @@ import (
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/deviceshare"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/elasticquota"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/loadaware"
+	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/nodeReservation"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/nodenumaresource"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/reservation"
 
@@ -50,6 +51,7 @@ var koordinatorPlugins = map[string]frameworkruntime.PluginFactory{
 	deviceshare.Name:                 deviceshare.New,
 	elasticquota.Name:                elasticquota.New,
 	compatibledefaultpreemption.Name: compatibledefaultpreemption.New,
+	nodeReservation.Name:             nodeReservation.New,
 }
 
 // Register custom scheduling hooks for pre-process scheduling context before call plugins.

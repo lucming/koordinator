@@ -227,18 +227,14 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 
 	// handle cpus reserved by annotation of node.
 	node := s.nodeInformer.GetNode()
-	if reservedVal, ok := node.Annotations[extension.CPUsReservedByNode]; ok && reservedVal != "" {
-		CPUsReservedBykubelet, err := cpuset.Parse(cpuManagerPolicy.ReservedCPUs)
-		if err != nil {
-			return nil, err
+	cpusReservedByNode := ""
+	reservedObj := extension.KoordReserved{}
+	if reserved, ok := node.Annotations[extension.ReservedByNode]; ok {
+		if err := json.Unmarshal([]byte(reserved), reservedObj); err != nil {
+			if reservedObj.ReservedCPUs != "" {
+				cpusReservedByNode = reservedObj.ReservedCPUs
+			}
 		}
-
-		CPUsReservedByNode, err := cpuset.Parse(reservedVal)
-		if err != nil {
-			return nil, err
-		}
-
-		cpuManagerPolicy.ReservedCPUs = CPUsReservedBykubelet.Union(CPUsReservedByNode).String()
 	}
 
 	cpuManagerPolicyJSON, err := json.Marshal(cpuManagerPolicy)
@@ -287,6 +283,9 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 	annotations[extension.AnnotationKubeletCPUManagerPolicy] = string(cpuManagerPolicyJSON)
 	if len(podAllocsJSON) != 0 {
 		annotations[extension.AnnotationNodeCPUAllocs] = string(podAllocsJSON)
+	}
+	if cpusReservedByNode != "" {
+		annotations[extension.CPUsReservedByNode] = cpusReservedByNode
 	}
 
 	return annotations, nil
