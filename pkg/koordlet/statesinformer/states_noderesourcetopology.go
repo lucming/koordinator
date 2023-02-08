@@ -230,6 +230,13 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 		return nil, fmt.Errorf("failed to marshal cpu manager policy, err: %v", err)
 	}
 
+	// handle cpus reserved by annotation of node.
+	node := s.nodeInformer.GetNode()
+	reservedJson := ""
+	if reserved, ok := node.Annotations[extension.ReservedByNode]; ok {
+		reservedJson = reserved
+	}
+
 	// Users can specify the kubelet RootDirectory on the host in the koordlet DaemonSet,
 	// but inside koordlet it is always mounted to the path /var/lib/kubelet
 	stateFilePath := kubelet.GetCPUManagerStateFilePath("/var/lib/kubelet")
@@ -271,6 +278,9 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 	annotations[extension.AnnotationKubeletCPUManagerPolicy] = string(cpuManagerPolicyJSON)
 	if len(podAllocsJSON) != 0 {
 		annotations[extension.AnnotationNodeCPUAllocs] = string(podAllocsJSON)
+	}
+	if reservedJson != "" {
+		annotations[extension.ReservedByNode] = reservedJson
 	}
 
 	return annotations, nil
@@ -403,6 +413,7 @@ func isSyncNeeded(oldNRT, newNRT *v1alpha1.NodeResourceTopology, nodename string
 	if oldNRT == nil || oldNRT.Annotations == nil || newNRT.Annotations == nil {
 		return true
 	}
+
 	if isEqualTopo(oldNRT.Annotations, newNRT.Annotations) {
 		// do nothing
 		klog.V(4).Infof("all good, no need to report nodetopo  %s", nodename)
@@ -419,8 +430,14 @@ func isEqualTopo(OldTopo map[string]string, NewTopo map[string]string) bool {
 		OldData interface{}
 		NewData interface{}
 	)
-	keyslice := []string{extension.AnnotationKubeletCPUManagerPolicy, extension.AnnotationNodeCPUSharedPools,
-		extension.AnnotationNodeCPUTopology, extension.AnnotationNodeCPUAllocs}
+	keyslice := []string{
+		extension.AnnotationKubeletCPUManagerPolicy,
+		extension.AnnotationNodeCPUSharedPools,
+		extension.AnnotationNodeCPUTopology,
+		extension.AnnotationNodeCPUAllocs,
+		extension.ReservedByNode,
+	}
+
 	for _, key := range keyslice {
 		oldValue, oldExist := OldTopo[key]
 		newValue, newExist := NewTopo[key]

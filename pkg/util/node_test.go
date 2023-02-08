@@ -17,9 +17,13 @@ limitations under the License.
 package util
 
 import (
+	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	apiext "github.com/koordinator-sh/koordinator/apis/extension"
 )
 
 func TestGetNodeAddress(t *testing.T) {
@@ -114,6 +118,39 @@ func TestIsNodeAddressTypeSupported(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsNodeAddressTypeSupported(tt.args.addrType); got != tt.want {
 				t.Errorf("IsAddressTypeSupported() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetCPUsReservedByNode(t *testing.T) {
+	type args struct {
+		reserved string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  resource.Quantity
+		want1 apiext.QoSClass
+	}{
+		// TODO: Add test cases.
+		{
+			name: "demo1",
+			args: args{
+				reserved: `{"reservedResources":{"cpu":"1m"},"reservedCPUs":"0-4","QOSEffected":"LSE"}`,
+			},
+			want:  resource.MustParse("5"),
+			want1: apiext.QoSLSE,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := GetCPUsReservedByNode(tt.args.reserved)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetCPUsReservedByNode() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("GetCPUsReservedByNode() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
