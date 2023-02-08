@@ -18,6 +18,7 @@ package nodenumaresource
 
 import (
 	"context"
+	"encoding/json"
 
 	nrtv1alpha1 "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/apis/topology/v1alpha1"
 	nrtclientset "github.com/k8stopologyawareschedwg/noderesourcetopology-api/pkg/generated/clientset/versioned"
@@ -118,14 +119,29 @@ func (m *nodeResourceTopologyEventHandler) updateNodeResourceTopology(oldNodeRes
 		}
 	}
 
+	// remove cpus reserved by node.annotation.
+	var CPUsReservedByNode cpuset.CPUSet
+	if val, ok := newNodeResTopology.Annotations[extension.ReservedByNode]; ok && val != "" {
+		reserved := extension.KoordReserved{}
+		if err := json.Unmarshal([]byte(val), &reserved); err != nil {
+			klog.Errorf("failed to unmarshal reserved resources from node.annotation in nodenumaresource scheduler plugin.err:%v", err)
+		}
+		CPUsReservedByNode, err = cpuset.Parse(reserved.ReservedCPUs)
+		if err != nil {
+			klog.Errorf("Failed to get cpus reserved by node annotation, err: %v", err)
+		}
+	}
+
 	reportedCPUTopology, err := extension.GetCPUTopology(newNodeResTopology.Annotations)
 	if err != nil {
 		klog.Errorf("Failed to GetCPUTopology, name: %s, err: %v", newNodeResTopology.Name, err)
 	}
 
+	// reservedCPUs = cpus(all) - cpus(guaranteed) - cpus(kubeletReserved) - cpus(nodeReservedByAnno)
 	cpuTopology := convertCPUTopology(reportedCPUTopology)
 	reservedCPUs := m.getPodAllocsCPUSet(podCPUAllocs)
 	reservedCPUs = reservedCPUs.Union(kubeletReservedCPUs)
+	reservedCPUs = reservedCPUs.Union(CPUsReservedByNode)
 
 	nodeName := newNodeResTopology.Name
 	m.topologyManager.UpdateCPUTopologyOptions(nodeName, func(options *CPUTopologyOptions) {

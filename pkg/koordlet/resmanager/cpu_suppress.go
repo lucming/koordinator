@@ -17,6 +17,7 @@ limitations under the License.
 package resmanager
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -139,12 +140,29 @@ func (r *CPUSuppress) calculateBESuppressCPU(node *corev1.Node, nodeMetric *metr
 		systemUsedCPU = *resource.NewMilliQuantity(0, resource.DecimalSI)
 	}
 
-	// suppress(BE) := node.Total * SLOPercent - pod(LS).Used - system.Used
+	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
+	qosEffected := apiext.QoSNone
+	if reserved, ok := node.Annotations[apiext.ReservedByNode]; ok {
+		cpuReservedByNode, qosEffected = util.GetCPUsReservedByNode(reserved)
+	}
+
+	// qos(nodeReserv) == LSE: suppress(BE) := node.Total * SLOPercent - pod(LS).Used - max(system.Used, nodeRserv)
+	// qos(nodeReserv) != LSE: suppress(BE) := node.Total * SLOPercent - pod(LS).Used - system.Used
 	// NOTE: valid milli-cpu values should not larger than 2^20, so there is no overflow during the calculation
 	nodeBESuppressCPU := resource.NewMilliQuantity(node.Status.Allocatable.Cpu().MilliValue()*beCPUUsedThreshold/100,
 		node.Status.Allocatable.Cpu().Format)
 	nodeBESuppressCPU.Sub(podLSUsedCPU)
-	nodeBESuppressCPU.Sub(systemUsedCPU)
+
+	if qosEffected == apiext.QoSLSE {
+		maxQuantify := systemUsedCPU
+		if systemUsedCPU.MilliValue() < cpuReservedByNode.MilliValue() {
+			maxQuantify = cpuReservedByNode
+		}
+		nodeBESuppressCPU.Sub(maxQuantify)
+	} else {
+		nodeBESuppressCPU.Sub(systemUsedCPU)
+	}
+
 	metrics.RecordBESuppressLSUsedCPU(float64(podLSUsedCPU.MilliValue()) / 1000)
 	klog.Infof("nodeSuppressBE[CPU(Core)]:%v = node.Total:%v * SLOPercent:%v%% - systemUsage:%v - podLSUsed:%v\n",
 		nodeBESuppressCPU.Value(), node.Status.Allocatable.Cpu().Value(), beCPUUsedThreshold, systemUsedCPU.Value(),
@@ -316,10 +334,30 @@ func (r *CPUSuppress) adjustByCPUSet(cpusetQuantity *resource.Quantity, nodeCPUI
 			cpuIdToPool[int32(cpuID)] = apiext.GetPodQoSClass(podMeta.Pod)
 		}
 	}
+
+	topo := r.resmanager.statesInformer.GetNodeTopo()
+	if topo == nil {
+		return
+	}
+
+	reservedByNode := apiext.KoordReserved{}
+	if reserved, ok := topo.Annotations[apiext.ReservedByNode]; ok {
+		if err := json.Unmarshal([]byte(reserved), &reservedByNode); err != nil {
+			klog.Errorf("Failed to unmarshal reserved resources from node.err:%v.", err)
+			return
+		}
+	}
+	cpusReservedByNodeAnno := cpuset.MustParse(reservedByNode.ReservedCPUs)
+
 	var lsrCpus []koordletutil.ProcessorInfo
 	var lsCpus []koordletutil.ProcessorInfo
 	// FIXME: be pods might be starved since lse pods can run out of all cpus
 	for _, processor := range nodeCPUInfo.ProcessorInfos {
+		cpuset := cpuset.NewCPUSet(int(processor.CPUID))
+		if reservedByNode.QOSEffected == apiext.QoSLSE && cpuset.IsSubsetOf(cpusReservedByNodeAnno) {
+			continue
+		}
+
 		if cpuIdToPool[processor.CPUID] == apiext.QoSLSR {
 			lsrCpus = append(lsrCpus, processor)
 		} else if cpuIdToPool[processor.CPUID] != apiext.QoSLSE {

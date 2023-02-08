@@ -17,6 +17,7 @@ limitations under the License.
 package cpuset
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/runtimehooks/protocol"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/statesinformer"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/util"
+	pkgutil "github.com/koordinator-sh/koordinator/pkg/util"
 )
 
 type cpusetRule struct {
@@ -103,6 +105,16 @@ func (p *cpusetPlugin) parseRule(nodeTopoIf interface{}) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	// remove cpus that already reserved by node.annotation.
+	cpusReserved := ext.KoordReserved{}
+	if val, ok := nodeTopo.Annotations[ext.ReservedByNode]; ok {
+		if err := json.Unmarshal([]byte(val), &cpusReserved); err != nil {
+			return false, fmt.Errorf("failed to unmarshal reserved resources from node.annotation in runtimehook.err:%v", err)
+		}
+	}
+	cpuSharePools = pkgutil.RemoveNodeReservedCPUs(cpuSharePools, cpusReserved.ReservedCPUs)
+
 	cpuManagerPolicy, err := ext.GetKubeletCPUManagerPolicy(nodeTopo.Annotations)
 	if err != nil {
 		return false, err
