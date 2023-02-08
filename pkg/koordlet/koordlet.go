@@ -58,7 +58,7 @@ type Daemon interface {
 }
 
 type daemon struct {
-	metricAdvisor  metricsadvisor.MetricAdvisor
+	collector      metricsadvisor.Collector
 	statesInformer statesinformer.StatesInformer
 	metricCache    metriccache.MetricCache
 	resManager     resmanager.ResManager
@@ -120,7 +120,7 @@ func NewDaemon(config *config.Configuration) (Daemon, error) {
 	system.SetupCgroupPathFormatter(detectCgroupDriver)
 	klog.Infof("Node %s use '%s' as cgroup driver", nodeName, string(detectCgroupDriver))
 
-	collectorService := metricsadvisor.NewMetricAdvisor(config.CollectorConf, statesInformer, metricCache)
+	collectorService := metricsadvisor.NewCollector(config.CollectorConf, statesInformer, metricCache)
 
 	resManagerService := resmanager.NewResManager(config.ResManagerConf, scheme, kubeClient, crdClient, nodeName, statesInformer, metricCache, int64(config.CollectorConf.CollectResUsedIntervalSeconds))
 
@@ -132,7 +132,7 @@ func NewDaemon(config *config.Configuration) (Daemon, error) {
 	}
 
 	d := &daemon{
-		metricAdvisor:  collectorService,
+		collector:      collectorService,
 		statesInformer: statesInformer,
 		metricCache:    metricCache,
 		resManager:     resManagerService,
@@ -149,50 +149,58 @@ func (d *daemon) Run(stopCh <-chan struct{}) {
 
 	go func() {
 		if err := d.metricCache.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the metric cache: ", err)
+			klog.Error("Unable to run the metric cache: ", err)
+			os.Exit(1)
 		}
 	}()
 
 	// start states informer
 	go func() {
 		if err := d.statesInformer.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the states informer: ", err)
+			klog.Error("Unable to run the states informer: ", err)
+			os.Exit(1)
 		}
 	}()
-	// wait for metric advisor sync
+	// wait for collector sync
 	if !cache.WaitForCacheSync(stopCh, d.statesInformer.HasSynced) {
-		klog.Fatalf("time out waiting for states informer to sync")
+		klog.Error("time out waiting for states informer to sync")
+		os.Exit(1)
 	}
 
-	// start metric advisor
+	// start collector
 	go func() {
-		if err := d.metricAdvisor.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the metric advisor: ", err)
+		if err := d.collector.Run(stopCh); err != nil {
+			klog.Error("Unable to run the collector: ", err)
+			os.Exit(1)
 		}
 	}()
 
-	// wait for metric advisor sync
-	if !cache.WaitForCacheSync(stopCh, d.metricAdvisor.HasSynced) {
-		klog.Fatalf("time out waiting for metric advisor to sync")
+	// wait for collector sync
+	if !cache.WaitForCacheSync(stopCh, d.collector.HasSynced) {
+		klog.Error("time out waiting for collector to sync")
+		os.Exit(1)
 	}
 
 	// start resmanager
 	go func() {
 		if err := d.resManager.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the resManager: ", err)
+			klog.Error("Unable to run the resManager: ", err)
+			os.Exit(1)
 		}
 	}()
 
 	// start QoS Manager
 	go func() {
 		if err := d.qosManager.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the QoSManager: ", err)
+			klog.Error("Unable to run the QoSManager: ", err)
+			os.Exit(1)
 		}
 	}()
 
 	go func() {
 		if err := d.runtimeHook.Run(stopCh); err != nil {
-			klog.Fatalf("Unable to run the runtimeHook: ", err)
+			klog.Error("Unable to run the runtimeHook: ", err)
+			os.Exit(1)
 		}
 	}()
 

@@ -292,7 +292,6 @@ func Test_GetContainerCurTasks(t *testing.T) {
 }
 
 func Test_GetContainerCgroupXXXPath(t *testing.T) {
-	system.UseCgroupsV2 = false
 	system.SetupCgroupPathFormatter(system.Systemd)
 	defer system.SetupCgroupPathFormatter(system.Systemd)
 	type args struct {
@@ -522,10 +521,10 @@ func Test_GetContainerPSIPath(t *testing.T) {
 	defer system.SetupCgroupPathFormatter(system.Systemd)
 	type args struct {
 		name            string
-		fn              func(podParentDir string, c *corev1.ContainerStatus) (system.PSIPath, error)
+		fn              func(podParentDir string, c *corev1.ContainerStatus) (PSIPath, error)
 		containerStatus *corev1.ContainerStatus
 		podParentDir    string
-		expectPath      system.PSIPath
+		expectPath      PSIPath
 		expectErr       bool
 	}
 
@@ -537,7 +536,7 @@ func Test_GetContainerPSIPath(t *testing.T) {
 			containerStatus: &corev1.ContainerStatus{
 				ContainerID: "docker://703b1b4e811f56673d68f9531204e5dd4963e734e2929a7056fd5f33fde4abaf",
 			},
-			expectPath: system.PSIPath{
+			expectPath: PSIPath{
 				CPU: "/host-cgroup/cpuacct/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod6553a60b_2b97_442a_b6da_a5704d81dd98.slice/docker-703b1b4e811f56673d68f9531204e5dd4963e734e2929a7056fd5f33fde4abaf.scope/cpu.pressure",
 				Mem: "/host-cgroup/cpuacct/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod6553a60b_2b97_442a_b6da_a5704d81dd98.slice/docker-703b1b4e811f56673d68f9531204e5dd4963e734e2929a7056fd5f33fde4abaf.scope/memory.pressure",
 				IO:  "/host-cgroup/cpuacct/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod6553a60b_2b97_442a_b6da_a5704d81dd98.slice/docker-703b1b4e811f56673d68f9531204e5dd4963e734e2929a7056fd5f33fde4abaf.scope/io.pressure",

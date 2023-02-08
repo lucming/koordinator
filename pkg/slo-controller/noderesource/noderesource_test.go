@@ -87,11 +87,9 @@ func Test_isColocationCfgDisabled(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{
@@ -180,11 +178,9 @@ func Test_isDegradeNeeded(t *testing.T) {
 						},
 						NodeConfigs: []extension.NodeColocationCfg{
 							{
-								NodeCfgProfile: extension.NodeCfgProfile{
-									NodeSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"xxx": "yyy",
-										},
+								NodeSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"xxx": "yyy",
 									},
 								},
 								ColocationStrategy: extension.ColocationStrategy{
@@ -243,8 +239,8 @@ func Test_updateNodeGPUResource_updateGPUDriverAndModel(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testNode.Name,
 			Labels: map[string]string{
-				extension.LabelGPUModel:         "A100",
-				extension.LabelGPUDriverVersion: "480",
+				extension.GPUModel:  "A100",
+				extension.GPUDriver: "480",
 			},
 		},
 		Spec: schedulingv1alpha1.DeviceSpec{
@@ -255,9 +251,9 @@ func Test_updateNodeGPUResource_updateGPUDriverAndModel(t *testing.T) {
 					Health: true,
 					Type:   schedulingv1alpha1.GPU,
 					Resources: map[corev1.ResourceName]resource.Quantity{
-						extension.ResourceGPUCore:        *resource.NewQuantity(100, resource.BinarySI),
-						extension.ResourceGPUMemory:      *resource.NewQuantity(8000, resource.BinarySI),
-						extension.ResourceGPUMemoryRatio: *resource.NewQuantity(100, resource.BinarySI),
+						extension.GPUCore:        *resource.NewQuantity(100, resource.BinarySI),
+						extension.GPUMemory:      *resource.NewQuantity(8000, resource.BinarySI),
+						extension.GPUMemoryRatio: *resource.NewQuantity(100, resource.BinarySI),
 					},
 				},
 				{
@@ -266,9 +262,9 @@ func Test_updateNodeGPUResource_updateGPUDriverAndModel(t *testing.T) {
 					Health: true,
 					Type:   schedulingv1alpha1.GPU,
 					Resources: map[corev1.ResourceName]resource.Quantity{
-						extension.ResourceGPUCore:        *resource.NewQuantity(100, resource.BinarySI),
-						extension.ResourceGPUMemory:      *resource.NewQuantity(10000, resource.BinarySI),
-						extension.ResourceGPUMemoryRatio: *resource.NewQuantity(100, resource.BinarySI),
+						extension.GPUCore:        *resource.NewQuantity(100, resource.BinarySI),
+						extension.GPUMemory:      *resource.NewQuantity(10000, resource.BinarySI),
+						extension.GPUMemoryRatio: *resource.NewQuantity(100, resource.BinarySI),
 					},
 				},
 			},
@@ -278,9 +274,9 @@ func Test_updateNodeGPUResource_updateGPUDriverAndModel(t *testing.T) {
 	r.updateGPUNodeResource(testNode, fakeDevice)
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: testNode.Name}, testNode)
 	assert.Equal(t, nil, err)
-	actualMemoryRatio := testNode.Status.Allocatable[extension.ResourceGPUMemoryRatio]
-	actualMemory := testNode.Status.Allocatable[extension.ResourceGPUMemory]
-	actualCore := testNode.Status.Allocatable[extension.ResourceGPUCore]
+	actualMemoryRatio := testNode.Status.Allocatable[extension.GPUMemoryRatio]
+	actualMemory := testNode.Status.Allocatable[extension.GPUMemory]
+	actualCore := testNode.Status.Allocatable[extension.GPUCore]
 	assert.Equal(t, actualMemoryRatio.Value(), resource.NewQuantity(200, resource.DecimalSI).Value())
 	assert.Equal(t, actualMemory.Value(), resource.NewQuantity(18000, resource.BinarySI).Value())
 	assert.Equal(t, actualCore.Value(), resource.NewQuantity(200, resource.BinarySI).Value())
@@ -288,8 +284,8 @@ func Test_updateNodeGPUResource_updateGPUDriverAndModel(t *testing.T) {
 	r.updateGPUDriverAndModel(testNode, fakeDevice)
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: testNode.Name}, testNode)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, testNode.Labels[extension.LabelGPUModel], "A100")
-	assert.Equal(t, testNode.Labels[extension.LabelGPUDriverVersion], "480")
+	assert.Equal(t, testNode.Labels[extension.GPUModel], "A100")
+	assert.Equal(t, testNode.Labels[extension.GPUDriver], "480")
 }
 
 func Test_isGPUResourceNeedSync(t *testing.T) {
@@ -306,9 +302,9 @@ func Test_isGPUResourceNeedSync(t *testing.T) {
 				},
 				Status: corev1.NodeStatus{
 					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("20"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("20"),
+						extension.GPUCore:        resource.MustParse("20"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("20"),
 					},
 				},
 			},
@@ -318,39 +314,9 @@ func Test_isGPUResourceNeedSync(t *testing.T) {
 				},
 				Status: corev1.NodeStatus{
 					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("20"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("20"),
-					},
-				},
-			},
-			&SyncContext{
-				contextMap: map[string]time.Time{"/test-node0": time.Now()},
-			},
-			false,
-		},
-		{
-			&corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node0",
-				},
-				Status: corev1.NodeStatus{
-					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("20"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("21"),
-					},
-				},
-			},
-			&corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node0",
-				},
-				Status: corev1.NodeStatus{
-					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("21"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("20"),
+						extension.GPUCore:        resource.MustParse("20"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("20"),
 					},
 				},
 			},
@@ -366,9 +332,9 @@ func Test_isGPUResourceNeedSync(t *testing.T) {
 				},
 				Status: corev1.NodeStatus{
 					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("20"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("20"),
+						extension.GPUCore:        resource.MustParse("20"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("21"),
 					},
 				},
 			},
@@ -378,9 +344,39 @@ func Test_isGPUResourceNeedSync(t *testing.T) {
 				},
 				Status: corev1.NodeStatus{
 					Allocatable: corev1.ResourceList{
-						extension.ResourceGPUCore:        resource.MustParse("20"),
-						extension.ResourceGPUMemory:      resource.MustParse("40G"),
-						extension.ResourceGPUMemoryRatio: resource.MustParse("20"),
+						extension.GPUCore:        resource.MustParse("21"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("20"),
+					},
+				},
+			},
+			&SyncContext{
+				contextMap: map[string]time.Time{"/test-node0": time.Now()},
+			},
+			false,
+		},
+		{
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node0",
+				},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						extension.GPUCore:        resource.MustParse("20"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("20"),
+					},
+				},
+			},
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node0",
+				},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						extension.GPUCore:        resource.MustParse("20"),
+						extension.GPUMemory:      resource.MustParse("40G"),
+						extension.GPUMemoryRatio: resource.MustParse("20"),
 					},
 				},
 			},
@@ -422,8 +418,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "A100",
-						extension.LabelGPUDriverVersion: "480",
+						extension.GPUModel:  "A100",
+						extension.GPUDriver: "480",
 					},
 				},
 			},
@@ -431,8 +427,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "A100",
-						extension.LabelGPUDriverVersion: "480",
+						extension.GPUModel:  "A100",
+						extension.GPUDriver: "480",
 					},
 				},
 			},
@@ -443,8 +439,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "P40",
-						extension.LabelGPUDriverVersion: "480",
+						extension.GPUModel:  "P40",
+						extension.GPUDriver: "480",
 					},
 				},
 			},
@@ -452,8 +448,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "A100",
-						extension.LabelGPUDriverVersion: "480",
+						extension.GPUModel:  "A100",
+						extension.GPUDriver: "480",
 					},
 				},
 			},
@@ -464,8 +460,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "A100",
-						extension.LabelGPUDriverVersion: "470",
+						extension.GPUModel:  "A100",
+						extension.GPUDriver: "470",
 					},
 				},
 			},
@@ -473,8 +469,8 @@ func Test_isGPULabelNeedSync(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node0",
 					Labels: map[string]string{
-						extension.LabelGPUModel:         "A100",
-						extension.LabelGPUDriverVersion: "480",
+						extension.GPUModel:  "A100",
+						extension.GPUDriver: "480",
 					},
 				},
 			},
@@ -771,11 +767,9 @@ func Test_updateNodeBEResource(t *testing.T) {
 					ColocationStrategy: enabledCfg.ColocationStrategy,
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{
@@ -785,11 +779,9 @@ func Test_updateNodeBEResource(t *testing.T) {
 							},
 						},
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"abc": "def",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"abc": "def",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{

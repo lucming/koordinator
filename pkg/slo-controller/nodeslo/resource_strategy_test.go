@@ -46,12 +46,8 @@ func Test_getResourceThresholdSpec(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeResourceThresholdStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
-					},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"xxx": "yyy"},
 				},
 				ResourceThresholdStrategy: &slov1alpha1.ResourceThresholdStrategy{
 					CPUSuppressThresholdPercent: pointer.Int64Ptr(50),
@@ -142,24 +138,16 @@ func Test_calculateResourceThresholdCfgMerged(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeResourceThresholdStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
-					},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"xxx": "yyy"},
 				},
 				ResourceThresholdStrategy: &slov1alpha1.ResourceThresholdStrategy{
 					CPUSuppressThresholdPercent: pointer.Int64Ptr(40),
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
-					},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"zzz": "zzz"},
 				},
 				ResourceThresholdStrategy: &slov1alpha1.ResourceThresholdStrategy{
 					CPUSuppressThresholdPercent: pointer.Int64Ptr(50),
@@ -174,22 +162,14 @@ func Test_calculateResourceThresholdCfgMerged(t *testing.T) {
 	expectTestingResourceThresholdCfg1.ClusterStrategy.CPUSuppressThresholdPercent = testingResourceThresholdCfg1.ClusterStrategy.CPUSuppressThresholdPercent
 	expectTestingResourceThresholdCfg1.NodeStrategies = []extension.NodeResourceThresholdStrategy{
 		{
-			NodeCfgProfile: extension.NodeCfgProfile{
-				NodeSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"xxx": "yyy",
-					},
-				},
+			NodeSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"xxx": "yyy"},
 			},
 			ResourceThresholdStrategy: expectTestingResourceThresholdCfg1.ClusterStrategy.DeepCopy(),
 		},
 		{
-			NodeCfgProfile: extension.NodeCfgProfile{
-				NodeSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"zzz": "zzz",
-					},
-				},
+			NodeSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"zzz": "zzz"},
 			},
 			ResourceThresholdStrategy: expectTestingResourceThresholdCfg1.ClusterStrategy.DeepCopy(),
 		},
@@ -289,11 +269,9 @@ func Test_getResourceQOSSpec(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeResourceQOSStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				ResourceQOSStrategy: &slov1alpha1.ResourceQOSStrategy{
@@ -307,11 +285,9 @@ func Test_getResourceQOSSpec(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				ResourceQOSStrategy: &slov1alpha1.ResourceQOSStrategy{
@@ -442,11 +418,9 @@ func Test_calculateResourceQOSCfgMerged(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeResourceQOSStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				ResourceQOSStrategy: &slov1alpha1.ResourceQOSStrategy{
@@ -460,11 +434,9 @@ func Test_calculateResourceQOSCfgMerged(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				ResourceQOSStrategy: &slov1alpha1.ResourceQOSStrategy{
@@ -570,11 +542,9 @@ func Test_getCPBurstConfigSpec(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeCPUBurstCfg{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				CPUBurstStrategy: &slov1alpha1.CPUBurstStrategy{
@@ -584,11 +554,9 @@ func Test_getCPBurstConfigSpec(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				CPUBurstStrategy: &slov1alpha1.CPUBurstStrategy{
@@ -678,11 +646,9 @@ func Test_calculateCPUBurstCfgMerged(t *testing.T) {
 		ClusterStrategy: testingCfgClusterOnly.ClusterStrategy,
 		NodeStrategies: []extension.NodeCPUBurstCfg{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				CPUBurstStrategy: &slov1alpha1.CPUBurstStrategy{
@@ -692,11 +658,9 @@ func Test_calculateCPUBurstCfgMerged(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				CPUBurstStrategy: &slov1alpha1.CPUBurstStrategy{
@@ -713,21 +677,17 @@ func Test_calculateCPUBurstCfgMerged(t *testing.T) {
 		ClusterStrategy: expectTestingCfgClusterOnly.ClusterStrategy.DeepCopy(),
 		NodeStrategies: []extension.NodeCPUBurstCfg{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				CPUBurstStrategy: expectTestingCfgClusterOnly.ClusterStrategy.DeepCopy(),
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				CPUBurstStrategy: expectTestingCfgClusterOnly.ClusterStrategy.DeepCopy(),
@@ -819,11 +779,9 @@ func Test_getSystemConfigSpec(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeSystemStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
@@ -831,11 +789,9 @@ func Test_getSystemConfigSpec(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
@@ -937,11 +893,9 @@ func Test_calculateSystemConfigMerged(t *testing.T) {
 		},
 		NodeStrategies: []extension.NodeSystemStrategy{
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
@@ -949,11 +903,9 @@ func Test_calculateSystemConfigMerged(t *testing.T) {
 				},
 			},
 			{
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"zzz": "zzz",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"zzz": "zzz",
 					},
 				},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
@@ -971,11 +923,9 @@ func Test_calculateSystemConfigMerged(t *testing.T) {
 		NodeStrategies: []extension.NodeSystemStrategy{
 			{
 
-				NodeCfgProfile: extension.NodeCfgProfile{
-					NodeSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"xxx": "yyy",
-						},
+				NodeSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"xxx": "yyy",
 					},
 				},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
@@ -983,13 +933,12 @@ func Test_calculateSystemConfigMerged(t *testing.T) {
 					WatermarkScaleFactor: pointer.Int64Ptr(151),
 				},
 			},
-			{NodeCfgProfile: extension.NodeCfgProfile{
+			{
 				NodeSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"zzz": "zzz",
 					},
 				},
-			},
 				SystemStrategy: &slov1alpha1.SystemStrategy{
 					MinFreeKbytesFactor:  pointer.Int64Ptr(140),
 					WatermarkScaleFactor: pointer.Int64Ptr(151),

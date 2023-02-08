@@ -163,7 +163,6 @@ const (
 	PodMigrationJobConditionEviction                       PodMigrationJobConditionType = "Eviction"
 	PodMigrationJobConditionPodScheduled                   PodMigrationJobConditionType = "PodScheduled"
 	PodMigrationJobConditionReservationPodBoundReservation PodMigrationJobConditionType = "PodBoundReservation"
-	PodMigrationJobConditionBoundPodReady                  PodMigrationJobConditionType = "BoundPodReady"
 	PodMigrationJobConditionReservationBound               PodMigrationJobConditionType = "ReservationBound"
 )
 
@@ -182,7 +181,6 @@ const (
 	PodMigrationJobReasonFailedEvict               = "FailedEvict"
 	PodMigrationJobReasonEvictComplete             = "EvictComplete"
 	PodMigrationJobReasonWaitForPodBindReservation = "WaitForPodBindReservation"
-	PodMigrationJobReasonWaitForBoundPodReady      = "WaitForBoundPodReady"
 )
 
 type PodMigrationJobConditionStatus string

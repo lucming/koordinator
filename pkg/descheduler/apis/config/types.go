@@ -61,12 +61,6 @@ type DeschedulerConfiguration struct {
 
 	// NodeSelector for a set of nodes to operate over
 	NodeSelector *metav1.LabelSelector
-
-	// MaxNoOfPodsToEvictPerNode restricts maximum of pods to be evicted per node.
-	MaxNoOfPodsToEvictPerNode *uint
-
-	// MaxNoOfPodsToEvictPerNamespace restricts maximum of pods to be evicted per namespace.
-	MaxNoOfPodsToEvictPerNamespace *uint
 }
 
 // DeschedulerProfile is a descheduling profile.
@@ -95,18 +89,6 @@ type Plugin struct {
 type PluginConfig struct {
 	Name string
 	Args runtime.Object
-}
-
-type PriorityThreshold struct {
-	Value *int32
-	Name  string
-}
-
-// Namespaces carries a list of included/excluded namespaces
-// for which a given strategy is applicable
-type Namespaces struct {
-	Include []string
-	Exclude []string
 }
 
 type (

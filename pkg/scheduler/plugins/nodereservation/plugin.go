@@ -19,14 +19,11 @@ package nodereservation
 import (
 	"context"
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	resschedplug "k8s.io/kubernetes/pkg/scheduler/framework/plugins/noderesources"
 
-	apiext "github.com/koordinator-sh/koordinator/apis/extension"
 	"github.com/koordinator-sh/koordinator/pkg/util"
 )
 
@@ -38,7 +35,7 @@ const (
 var (
 	_ framework.FilterPlugin    = &Plugin{}
 	_ framework.PreFilterPlugin = &Plugin{}
-	//_ framework.ScorePlugin = &Plugin{}
+	_ framework.ScorePlugin     = &Plugin{}
 )
 
 type Plugin struct {
@@ -131,24 +128,14 @@ func getPreFilterState(cycleState *framework.CycleState) (*preFilterState, error
 }
 
 func (f *Plugin) Filter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
-	podQos := apiext.GetPodQoSClass(pod)
-	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
 	node := nodeInfo.Node()
-	if node != nil {
-		if reserved, ok := node.Annotations[apiext.ReservedByNode]; ok {
-			cpus, qos := util.GetCPUsReservedByNode(reserved)
-			if qos == podQos {
-				cpuReservedByNode = cpus
-			}
-		}
-	}
-
+	resourceListReservedByNode := util.GetReservedByNodeAnno(node.Annotations)
 	s, err := getPreFilterState(cycleState)
 	if err != nil {
 		return framework.AsStatus(err)
 	}
 
-	insufficientResources := fitsRequest(s, nodeInfo, cpuReservedByNode)
+	insufficientResources := fitsRequest(s, nodeInfo, resourceListReservedByNode)
 
 	if len(insufficientResources) != 0 {
 		// We will keep all failure reasons.
@@ -167,13 +154,13 @@ type InsufficientResource struct {
 	reservedByNode int64
 }
 
-func fitsRequest(podRequest *preFilterState, nodeInfo *framework.NodeInfo, cpuReservedByNode resource.Quantity) []InsufficientResource {
+func fitsRequest(podRequest *preFilterState, nodeInfo *framework.NodeInfo, rl corev1.ResourceList) []InsufficientResource {
 	insufficientResources := make([]InsufficientResource, 0, 2)
 	if podRequest.MilliCPU == 0 && podRequest.Memory == 0 {
 		return insufficientResources
 	}
 
-	if podRequest.MilliCPU > (nodeInfo.Allocatable.MilliCPU - nodeInfo.Requested.MilliCPU - cpuReservedByNode.MilliValue()) {
+	if podRequest.MilliCPU > (nodeInfo.Allocatable.MilliCPU - nodeInfo.Requested.MilliCPU - rl.Cpu().MilliValue()) {
 		insufficientResources = append(insufficientResources, InsufficientResource{
 			InsufficientResource: resschedplug.InsufficientResource{
 				ResourceName: corev1.ResourceCPU,
@@ -182,10 +169,11 @@ func fitsRequest(podRequest *preFilterState, nodeInfo *framework.NodeInfo, cpuRe
 				Used:         nodeInfo.Requested.MilliCPU,
 				Capacity:     nodeInfo.Allocatable.MilliCPU,
 			},
-			reservedByNode: cpuReservedByNode.MilliValue(),
+			reservedByNode: rl.Cpu().MilliValue(),
 		})
 	}
-	if podRequest.Memory > (nodeInfo.Allocatable.Memory - nodeInfo.Requested.Memory) {
+
+	if podRequest.Memory > (nodeInfo.Allocatable.Memory - nodeInfo.Requested.Memory - rl.Memory().MilliValue()) {
 		insufficientResources = append(insufficientResources, InsufficientResource{
 			InsufficientResource: resschedplug.InsufficientResource{
 				ResourceName: corev1.ResourceMemory,
@@ -194,8 +182,43 @@ func fitsRequest(podRequest *preFilterState, nodeInfo *framework.NodeInfo, cpuRe
 				Used:         nodeInfo.Requested.Memory,
 				Capacity:     nodeInfo.Allocatable.Memory,
 			},
+			reservedByNode: rl.Memory().MilliValue(),
+		})
+	}
+
+	for name, reserved := range rl {
+		if name == corev1.ResourceMemory || name == corev1.ResourceCPU {
+			continue
+		}
+		alloc, exist := nodeInfo.Allocatable.ScalarResources[name]
+		if !exist {
+			continue
+		}
+
+		if podRequest.ScalarResources[name] <= (alloc - nodeInfo.Requested.ScalarResources[name] - reserved.MilliValue()) {
+			continue
+		}
+
+		insufficientResources = append(insufficientResources, InsufficientResource{
+			InsufficientResource: resschedplug.InsufficientResource{
+				ResourceName: name,
+				Reason:       fmt.Sprintf("Insufficient %s", name),
+				Requested:    podRequest.ScalarResources[name],
+				Used:         nodeInfo.Requested.ScalarResources[name],
+				Capacity:     nodeInfo.Allocatable.ScalarResources[name],
+			},
+			reservedByNode: reserved.MilliValue(),
 		})
 	}
 
 	return insufficientResources
+}
+
+// TODO: logic for scoring
+func (p *Plugin) Score(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod, nodeName string) (int64, *framework.Status) {
+	return 0, nil
+}
+
+func (p *Plugin) ScoreExtensions() framework.ScoreExtensions {
+	return nil
 }

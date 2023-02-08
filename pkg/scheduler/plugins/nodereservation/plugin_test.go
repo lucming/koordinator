@@ -214,11 +214,10 @@ func TestPlugin_Filter_Only_Specific_CPU_Quantity(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reserved := apiext.KoordReserved{
-				ReservedResources: corev1.ResourceList{
+			reserved := apiext.NodeReservation{
+				Resources: corev1.ResourceList{
 					corev1.ResourceCPU: *resource.NewMilliQuantity(1, resource.DecimalSI),
 				},
-				QOSEffected: apiext.QoSLSE,
 			}
 			reservedStr, err := json.Marshal(reserved)
 			if err != nil {
@@ -228,7 +227,7 @@ func TestPlugin_Filter_Only_Specific_CPU_Quantity(t *testing.T) {
 			node := corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						apiext.ReservedByNode: string(reservedStr),
+						apiext.AnnotationNodeReservation: string(reservedStr),
 					},
 				},
 				Status: corev1.NodeStatus{Capacity: makeResources(10, 20).Capacity,
@@ -385,9 +384,8 @@ func TestPlugin_Filter_Only_Specific_CPUs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reserved := apiext.KoordReserved{
-				ReservedCPUs: "0-1",
-				QOSEffected:  apiext.QoSLSE,
+			reserved := apiext.NodeReservation{
+				SpecificCPUs: "0-1",
 			}
 			reservedStr, err := json.Marshal(reserved)
 			if err != nil {
@@ -397,7 +395,7 @@ func TestPlugin_Filter_Only_Specific_CPUs(t *testing.T) {
 			node := corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						apiext.ReservedByNode: string(reservedStr),
+						apiext.AnnotationNodeReservation: string(reservedStr),
 					},
 				},
 				Status: corev1.NodeStatus{Capacity: makeResources(10000, 20).Capacity,

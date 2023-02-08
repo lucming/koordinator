@@ -113,12 +113,8 @@ func (r *NodeResourceReconciler) getNodeAllocatable(node *corev1.Node) corev1.Re
 	result := node.Status.Allocatable.DeepCopy()
 	result = quotav1.Mask(result, []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory})
 
-	// if specific cpus reserved by annotation of node, should remove those cpus.
-	cpusReservedByNodeAnno, _ := util.GetCPUsReservedByNodeAnno(node.Annotations)
-	if quantity, ok := result[corev1.ResourceCPU]; ok {
-		quantity.Sub(cpusReservedByNodeAnno[corev1.ResourceCPU])
-		result[corev1.ResourceCPU] = quantity
-	}
+	resrevedByNode := util.GetReservedByNodeAnno(node.Annotations)
+	result = quotav1.Subtract(result, resrevedByNode)
 
 	return result
 }

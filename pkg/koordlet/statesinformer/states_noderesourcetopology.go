@@ -41,6 +41,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
+	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/topology"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
 	"github.com/koordinator-sh/koordinator/pkg/features"
@@ -198,6 +199,7 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 	}
 
 	var cpuManagerPolicy extension.KubeletCPUManagerPolicy
+	topology := kubelet.NewCPUTopology((*koordletutil.LocalCPUInfo)(nodeCPUInfo))
 	if s.config != nil && !s.config.DisableQueryKubeletConfig {
 		kubeletConfiguration, err := s.kubelet.GetKubeletConfiguration()
 		if err != nil {
@@ -212,7 +214,6 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 		}
 
 		if kubeletConfiguration.CPUManagerPolicy == string(cpumanager.PolicyStatic) {
-			topology := kubelet.NewCPUTopology((*koordletutil.LocalCPUInfo)(nodeCPUInfo))
 			reservedCPUs, err := kubelet.GetStaticCPUManagerPolicyReservedCPUs(topology, kubeletConfiguration)
 			if err != nil {
 				klog.Errorf("Failed to GetStaticCPUManagerPolicyReservedCPUs, err: %v", err)
@@ -232,9 +233,10 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 
 	// handle cpus reserved by annotation of node.
 	node := s.nodeInformer.GetNode()
-	reservedJson := ""
-	if reserved, ok := node.Annotations[extension.ReservedByNode]; ok {
-		reservedJson = reserved
+	reserved := getNodeReserved(topology, node.Annotations)
+	reservedJson, err := json.Marshal(reserved)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal reserved resource by node.annotation, err: %v", err)
 	}
 
 	// Users can specify the kubelet RootDirectory on the host in the koordlet DaemonSet,
@@ -279,11 +281,26 @@ func (s *nodeTopoInformer) calcNodeTopo() (map[string]string, error) {
 	if len(podAllocsJSON) != 0 {
 		annotations[extension.AnnotationNodeCPUAllocs] = string(podAllocsJSON)
 	}
-	if reservedJson != "" {
-		annotations[extension.ReservedByNode] = reservedJson
+	if len(reservedJson) != 0 {
+		annotations[extension.AnnotationNodeReservation] = string(reservedJson)
 	}
 
 	return annotations, nil
+}
+
+func getNodeReserved(topo *topology.CPUTopology, anno map[string]string) extension.NodeReservation {
+	reserved := extension.NodeReservation{}
+	allCPUs := topo.CPUDetails.CPUs()
+	specificCPUs, numReservedCPUs := extension.GetReservedCPUs(anno)
+	if numReservedCPUs > 0 {
+		cpus, _ := kubelet.TakeByTopology(allCPUs, numReservedCPUs, topo)
+		specificCPUs = cpus.String()
+	}
+	if specificCPUs != "" {
+		reserved.SpecificCPUs = specificCPUs
+	}
+
+	return reserved
 }
 
 func (s *nodeTopoInformer) calGuaranteedCpu(usedCPUs map[int32]*extension.CPUInfo, stateJSON string) ([]extension.PodCPUAlloc, error) {
@@ -435,7 +452,7 @@ func isEqualTopo(OldTopo map[string]string, NewTopo map[string]string) bool {
 		extension.AnnotationNodeCPUSharedPools,
 		extension.AnnotationNodeCPUTopology,
 		extension.AnnotationNodeCPUAllocs,
-		extension.ReservedByNode,
+		extension.AnnotationNodeReservation,
 	}
 
 	for _, key := range keyslice {

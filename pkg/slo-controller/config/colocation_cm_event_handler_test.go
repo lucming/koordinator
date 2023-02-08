@@ -293,11 +293,9 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{
@@ -431,11 +429,9 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{
@@ -488,11 +484,9 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
 							},
 							ColocationStrategy: extension.ColocationStrategy{
@@ -532,13 +526,10 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"aaa": "bbbb",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"aaa": "bbbb",
 								},
-								Name: "aaa-bbbb",
 							},
 							ColocationStrategy: extension.ColocationStrategy{
 								Enable: pointer.BoolPtr(true),
@@ -562,7 +553,7 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 						"\"cpuReclaimThresholdPercent\":70,\"memoryReclaimThresholdPercent\":80,\"memoryCalculatePolicy\":\"request\"," +
 						"\"updateTimeThresholdSeconds\":300," +
 						"\"degradeTimeMinutes\":5,\"resourceDiffThreshold\":0.1,\"nodeConfigs\":[{\"nodeSelector\":" +
-						"{\"matchLabels\":{\"xxx\":\"yyy\"}},\"name\":\"xxx-yyy\",\"enable\":true,\"cpuReclaimThresholdPercent\":60}]}",
+						"{\"matchLabels\":{\"xxx\":\"yyy\"}},\"enable\":true,\"cpuReclaimThresholdPercent\":60}]}",
 				},
 			}},
 			wantChanged: true,
@@ -582,13 +573,10 @@ func Test_syncColocationConfigIfChanged(t *testing.T) {
 					},
 					NodeConfigs: []extension.NodeColocationCfg{
 						{
-							NodeCfgProfile: extension.NodeCfgProfile{
-								NodeSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"xxx": "yyy",
-									},
+							NodeSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"xxx": "yyy",
 								},
-								Name: "xxx-yyy",
 							},
 							ColocationStrategy: extension.ColocationStrategy{
 								Enable:                         pointer.BoolPtr(true),

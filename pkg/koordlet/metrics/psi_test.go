@@ -21,11 +21,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/koordinator-sh/koordinator/pkg/koordlet/util"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/util/system"
 )
 
 func TestGetPSIRecords(t *testing.T) {
-	testingRecords := &system.PSIByResource{
+	testingRecords := &util.PSIByResource{
 		CPU: system.PSIStats{
 			Some:          &system.PSILine{},
 			Full:          &system.PSILine{},

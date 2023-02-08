@@ -22,6 +22,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/elasticquota/core"
+	"github.com/koordinator-sh/koordinator/pkg/util"
 )
 
 func (g *Plugin) OnNodeAdd(obj interface{}) {
@@ -35,7 +36,9 @@ func (g *Plugin) OnNodeAdd(obj interface{}) {
 		return
 	}
 
+	resrevedByNode := util.GetReservedByNodeAnno(node.Annotations)
 	allocatable := core.RunDecorateNode(node).Status.Allocatable
+	allocatable = quotav1.Subtract(allocatable, resrevedByNode)
 
 	g.nodeResourceMapLock.Lock()
 	defer g.nodeResourceMapLock.Unlock()
@@ -95,7 +98,9 @@ func (g *Plugin) OnNodeDelete(obj interface{}) {
 		return
 	}
 
+	resrevedByNode := util.GetReservedByNodeAnno(node.Annotations)
 	allocatable := core.RunDecorateNode(node).Status.Allocatable
+	allocatable = quotav1.Subtract(allocatable, resrevedByNode)
 	delta := quotav1.Subtract(corev1.ResourceList{}, allocatable)
 	g.groupQuotaManager.UpdateClusterTotalResource(delta)
 	delete(g.nodeResourceMap, node.Name)

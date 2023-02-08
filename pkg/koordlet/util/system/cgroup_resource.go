@@ -65,9 +65,6 @@ func (r *CgroupResourceRegistryImpl) Add(v CgroupVersion, s ...Resource) {
 		m = r.v2
 	}
 	for i := range s {
-		if conv, ok := s[i].(*CgroupResource); ok {
-			conv.SetCgroupVersion(v)
-		}
 		m[s[i].ResourceType()] = s[i]
 	}
 }
@@ -96,13 +93,6 @@ func GetCgroupResource(resourceType ResourceType) (Resource, error) {
 		return nil, fmt.Errorf("%s not found in cgroup registry", resourceType)
 	}
 	return r, nil
-}
-
-func IsCgroupV2Resource(r Resource) bool {
-	if conv, ok := r.(*CgroupResource); ok {
-		return conv.GetCgroupVersion() == CgroupVersionV2
-	}
-	return false
 }
 
 const ( // subsystems
@@ -198,9 +188,9 @@ var (
 
 	CPUAcctStat           = DefaultFactory.New(CPUAcctStatName, CgroupCPUAcctDir)
 	CPUAcctUsage          = DefaultFactory.New(CPUAcctUsageName, CgroupCPUAcctDir)
-	CPUAcctCPUPressure    = DefaultFactory.New(CPUAcctCPUPressureName, CgroupCPUAcctDir).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctCPUPressureName, CgroupCPUAcctDir))
-	CPUAcctMemoryPressure = DefaultFactory.New(CPUAcctMemoryPressureName, CgroupCPUAcctDir).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctMemoryPressureName, CgroupCPUAcctDir))
-	CPUAcctIOPressure     = DefaultFactory.New(CPUAcctIOPressureName, CgroupCPUAcctDir).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctIOPressureName, CgroupCPUAcctDir))
+	CPUAcctCPUPressure    = DefaultFactory.New(CPUAcctCPUPressureName, CgroupCPUAcctDir).WithCheckSupported(SupportedIfFileExists)
+	CPUAcctMemoryPressure = DefaultFactory.New(CPUAcctMemoryPressureName, CgroupCPUAcctDir).WithCheckSupported(SupportedIfFileExists)
+	CPUAcctIOPressure     = DefaultFactory.New(CPUAcctIOPressureName, CgroupCPUAcctDir).WithCheckSupported(SupportedIfFileExists)
 
 	MemoryLimit            = DefaultFactory.New(MemoryLimitName, CgroupMemDir)
 	MemoryUsage            = DefaultFactory.New(MemoryUsageName, CgroupMemDir)
@@ -252,17 +242,12 @@ var (
 		BlkioWriteBps,
 	}
 
-	CPUCFSQuotaV2  = DefaultFactory.NewV2(CPUCFSQuotaName, CPUMaxName)
-	CPUCFSPeriodV2 = DefaultFactory.NewV2(CPUCFSPeriodName, CPUMaxName)
-	CPUSharesV2    = DefaultFactory.NewV2(CPUSharesName, CPUWeightName).WithValidator(CPUWeightValidator)
-	CPUStatV2      = DefaultFactory.NewV2(CPUStatName, CPUStatName)
-	CPUAcctStatV2  = DefaultFactory.NewV2(CPUAcctStatName, CPUStatName)
-	CPUAcctUsageV2 = DefaultFactory.NewV2(CPUAcctUsageName, CPUStatName)
-
-	CPUAcctCPUPressureV2    = DefaultFactory.NewV2(CPUAcctCPUPressureName, CPUAcctCPUPressureName).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctCPUPressureName, ""))
-	CPUAcctMemoryPressureV2 = DefaultFactory.NewV2(CPUAcctMemoryPressureName, CPUAcctMemoryPressureName).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctMemoryPressureName, ""))
-	CPUAcctIOPressureV2     = DefaultFactory.NewV2(CPUAcctIOPressureName, CPUAcctIOPressureName).WithSupported(SupportedIfFileExistsInKubepods(CPUAcctIOPressureName, ""))
-
+	CPUCFSQuotaV2            = DefaultFactory.NewV2(CPUCFSQuotaName, CPUMaxName)
+	CPUCFSPeriodV2           = DefaultFactory.NewV2(CPUCFSPeriodName, CPUMaxName)
+	CPUSharesV2              = DefaultFactory.NewV2(CPUSharesName, CPUWeightName).WithValidator(CPUWeightValidator)
+	CPUStatV2                = DefaultFactory.NewV2(CPUStatName, CPUStatName)
+	CPUAcctStatV2            = DefaultFactory.NewV2(CPUAcctStatName, CPUStatName)
+	CPUAcctUsageV2           = DefaultFactory.NewV2(CPUAcctUsageName, CPUStatName)
 	CPUSetV2                 = DefaultFactory.NewV2(CPUSetCPUSName, CPUSetCPUSName).WithValidator(CPUSetCPUSValidator)
 	CPUSetEffectiveV2        = DefaultFactory.NewV2(CPUSetCPUSEffectiveName, CPUSetCPUSEffectiveName) // TODO: unify the R/W
 	CPUTasksV2               = DefaultFactory.NewV2(CPUTasksName, CPUThreadsName)
@@ -287,9 +272,6 @@ var (
 		CPUStatV2,
 		CPUAcctStatV2,
 		CPUAcctUsageV2,
-		CPUAcctCPUPressureV2,
-		CPUAcctMemoryPressureV2,
-		CPUAcctIOPressureV2,
 		CPUSetV2,
 		CPUSetEffectiveV2,
 		CPUTasksV2,
@@ -319,7 +301,6 @@ type CgroupResource struct {
 	SupportMsg     string
 	CheckSupported func(r Resource, parentDir string) (isSupported bool, msg string)
 	Validator      ResourceValidator
-	CgroupVersion  CgroupVersion
 }
 
 func (c *CgroupResource) ResourceType() ResourceType {
@@ -366,14 +347,6 @@ func (c *CgroupResource) WithCheckSupported(checkSupportedFn func(r Resource, pa
 	c.Supported = nil
 	c.CheckSupported = checkSupportedFn
 	return c
-}
-
-func (c *CgroupResource) SetCgroupVersion(cv CgroupVersion) {
-	c.CgroupVersion = cv
-}
-
-func (c *CgroupResource) GetCgroupVersion() CgroupVersion {
-	return c.CgroupVersion
 }
 
 func NewCommonCgroupResource(resourceType ResourceType, filename string, subfs string) Resource {

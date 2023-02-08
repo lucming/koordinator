@@ -63,18 +63,18 @@ func Test_nodeDeviceCache_onDeviceAdd(t *testing.T) {
 						deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								0: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("16Gi"),
 								},
 							},
 						},
 						deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								0: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("16Gi"),
 								},
 							},
 						},
@@ -94,18 +94,18 @@ func Test_nodeDeviceCache_onDeviceAdd(t *testing.T) {
 						deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								1: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("8Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("8Gi"),
 								},
 							},
 						},
 						deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								1: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("8Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("8Gi"),
 								},
 							},
 						},
@@ -119,28 +119,28 @@ func Test_nodeDeviceCache_onDeviceAdd(t *testing.T) {
 					deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							0: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 						},
 					},
 					deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							0: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 						},
 					},
@@ -148,37 +148,6 @@ func Test_nodeDeviceCache_onDeviceAdd(t *testing.T) {
 					allocateSet: map[schedulingv1alpha1.DeviceType]map[types.NamespacedName]map[int]corev1.ResourceList{},
 				},
 			},
-		},
-		{
-			name:   "deprecated resource names",
-			device: generateFakeDeviceWithDeprecatedResourceNames(),
-			deviceCache: &nodeDeviceCache{
-				nodeDeviceInfos: map[string]*nodeDevice{
-					"test-node-1": {
-						deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
-							schedulingv1alpha1.GPU: {
-								0: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
-								},
-							},
-						},
-						deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
-							schedulingv1alpha1.GPU: {
-								0: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
-								},
-							},
-						},
-						deviceUsed:  map[schedulingv1alpha1.DeviceType]deviceResources{},
-						allocateSet: map[schedulingv1alpha1.DeviceType]map[types.NamespacedName]map[int]corev1.ResourceList{},
-					},
-				},
-			},
-			wantCache: generateFakeNodeDeviceInfos(),
 		},
 	}
 	for _, tt := range tests {
@@ -221,9 +190,9 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 							Health: true,
 							Type:   schedulingv1alpha1.GPU,
 							Resources: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("32Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("32Gi"),
 							},
 						},
 					},
@@ -237,18 +206,18 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 					deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("32Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("32Gi"),
 							},
 						},
 					},
 					deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("32Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("32Gi"),
 							},
 						},
 					},
@@ -297,9 +266,9 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 							Minor: pointer.Int32Ptr(1),
 							Type:  schedulingv1alpha1.GPU,
 							Resources: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 						},
 						{
@@ -307,7 +276,7 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 							Minor: pointer.Int32Ptr(1),
 							Type:  schedulingv1alpha1.FPGA,
 							Resources: corev1.ResourceList{
-								apiext.ResourceFPGA: resource.MustParse("100"),
+								apiext.KoordFPGA: resource.MustParse("100"),
 							},
 						},
 					},
@@ -320,28 +289,28 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 						deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								1: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("16Gi"),
 								},
 							},
 							schedulingv1alpha1.FPGA: {
 								1: corev1.ResourceList{
-									apiext.ResourceFPGA: resource.MustParse("100"),
+									apiext.KoordFPGA: resource.MustParse("100"),
 								},
 							},
 						},
 						deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 							schedulingv1alpha1.GPU: {
 								1: corev1.ResourceList{
-									apiext.ResourceGPUCore:        resource.MustParse("100"),
-									apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-									apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+									apiext.GPUCore:        resource.MustParse("100"),
+									apiext.GPUMemoryRatio: resource.MustParse("100"),
+									apiext.GPUMemory:      resource.MustParse("16Gi"),
 								},
 							},
 							schedulingv1alpha1.FPGA: {
 								1: corev1.ResourceList{
-									apiext.ResourceFPGA: resource.MustParse("100"),
+									apiext.KoordFPGA: resource.MustParse("100"),
 								},
 							},
 						},
@@ -355,9 +324,9 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 					deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 						},
 						schedulingv1alpha1.FPGA: {},
@@ -365,69 +334,12 @@ func Test_nodeDeviceCache_onDeviceUpdate(t *testing.T) {
 					deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 						schedulingv1alpha1.GPU: {
 							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+								apiext.GPUCore:        resource.MustParse("100"),
+								apiext.GPUMemoryRatio: resource.MustParse("100"),
+								apiext.GPUMemory:      resource.MustParse("16Gi"),
 							},
 						},
 						schedulingv1alpha1.FPGA: {},
-					},
-					deviceUsed:  map[schedulingv1alpha1.DeviceType]deviceResources{},
-					allocateSet: map[schedulingv1alpha1.DeviceType]map[types.NamespacedName]map[int]corev1.ResourceList{},
-				},
-			},
-		},
-		{
-			name:      "deprecated resource names",
-			oldDevice: generateFakeDeviceWithDeprecatedResourceNames(),
-			newDevice: &schedulingv1alpha1.Device{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node-1",
-				},
-				Spec: schedulingv1alpha1.DeviceSpec{
-					Devices: []schedulingv1alpha1.DeviceInfo{
-						{
-							UUID:   string(uuid.NewUUID()),
-							Minor:  pointer.Int32Ptr(1),
-							Health: true,
-							Type:   schedulingv1alpha1.GPU,
-							Resources: corev1.ResourceList{
-								//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-								//nolint: staticcheck
-								apiext.DeprecatedGPUCore: resource.MustParse("100"),
-								//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-								//nolint: staticcheck
-								apiext.DeprecatedGPUMemoryRatio: resource.MustParse("100"),
-								//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-								//nolint: staticcheck
-								apiext.DeprecatedGPUMemory: resource.MustParse("32Gi"),
-							},
-						},
-					},
-				},
-			},
-			deviceCache: &nodeDeviceCache{
-				nodeDeviceInfos: generateFakeNodeDeviceInfos(),
-			},
-			wantCache: map[string]*nodeDevice{
-				"test-node-1": {
-					deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
-						schedulingv1alpha1.GPU: {
-							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("32Gi"),
-							},
-						},
-					},
-					deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
-						schedulingv1alpha1.GPU: {
-							1: corev1.ResourceList{
-								apiext.ResourceGPUCore:        resource.MustParse("100"),
-								apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-								apiext.ResourceGPUMemory:      resource.MustParse("32Gi"),
-							},
-						},
 					},
 					deviceUsed:  map[schedulingv1alpha1.DeviceType]deviceResources{},
 					allocateSet: map[schedulingv1alpha1.DeviceType]map[types.NamespacedName]map[int]corev1.ResourceList{},
@@ -508,38 +420,9 @@ func generateFakeDevice() *schedulingv1alpha1.Device {
 					Health: true,
 					Type:   schedulingv1alpha1.GPU,
 					Resources: corev1.ResourceList{
-						apiext.ResourceGPUCore:        resource.MustParse("100"),
-						apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-						apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
-					},
-				},
-			},
-		},
-	}
-}
-
-func generateFakeDeviceWithDeprecatedResourceNames() *schedulingv1alpha1.Device {
-	return &schedulingv1alpha1.Device{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node-1",
-		},
-		Spec: schedulingv1alpha1.DeviceSpec{
-			Devices: []schedulingv1alpha1.DeviceInfo{
-				{
-					UUID:   string(uuid.NewUUID()),
-					Minor:  pointer.Int32Ptr(1),
-					Health: true,
-					Type:   schedulingv1alpha1.GPU,
-					Resources: corev1.ResourceList{
-						//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-						//nolint: staticcheck
-						apiext.DeprecatedGPUCore: resource.MustParse("100"),
-						//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-						//nolint: staticcheck
-						apiext.DeprecatedGPUMemoryRatio: resource.MustParse("100"),
-						//lint:ignore SA1019 Device extension resource names should use the prefix `koordinator.sh`
-						//nolint: staticcheck
-						apiext.DeprecatedGPUMemory: resource.MustParse("16Gi"),
+						apiext.GPUCore:        resource.MustParse("100"),
+						apiext.GPUMemoryRatio: resource.MustParse("100"),
+						apiext.GPUMemory:      resource.MustParse("16Gi"),
 					},
 				},
 			},
@@ -560,9 +443,9 @@ func generateMultipleFakeDevice() *schedulingv1alpha1.Device {
 					Health: true,
 					Type:   schedulingv1alpha1.GPU,
 					Resources: corev1.ResourceList{
-						apiext.ResourceGPUCore:        resource.MustParse("100"),
-						apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-						apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+						apiext.GPUCore:        resource.MustParse("100"),
+						apiext.GPUMemoryRatio: resource.MustParse("100"),
+						apiext.GPUMemory:      resource.MustParse("16Gi"),
 					},
 				},
 				{
@@ -571,9 +454,9 @@ func generateMultipleFakeDevice() *schedulingv1alpha1.Device {
 					Health: true,
 					Type:   schedulingv1alpha1.GPU,
 					Resources: corev1.ResourceList{
-						apiext.ResourceGPUCore:        resource.MustParse("100"),
-						apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-						apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+						apiext.GPUCore:        resource.MustParse("100"),
+						apiext.GPUMemoryRatio: resource.MustParse("100"),
+						apiext.GPUMemory:      resource.MustParse("16Gi"),
 					},
 				},
 			},
@@ -587,18 +470,18 @@ func generateFakeNodeDeviceInfos() map[string]*nodeDevice {
 			deviceTotal: map[schedulingv1alpha1.DeviceType]deviceResources{
 				schedulingv1alpha1.GPU: {
 					1: corev1.ResourceList{
-						apiext.ResourceGPUCore:        resource.MustParse("100"),
-						apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-						apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+						apiext.GPUCore:        resource.MustParse("100"),
+						apiext.GPUMemoryRatio: resource.MustParse("100"),
+						apiext.GPUMemory:      resource.MustParse("16Gi"),
 					},
 				},
 			},
 			deviceFree: map[schedulingv1alpha1.DeviceType]deviceResources{
 				schedulingv1alpha1.GPU: {
 					1: corev1.ResourceList{
-						apiext.ResourceGPUCore:        resource.MustParse("100"),
-						apiext.ResourceGPUMemoryRatio: resource.MustParse("100"),
-						apiext.ResourceGPUMemory:      resource.MustParse("16Gi"),
+						apiext.GPUCore:        resource.MustParse("100"),
+						apiext.GPUMemoryRatio: resource.MustParse("100"),
+						apiext.GPUMemory:      resource.MustParse("16Gi"),
 					},
 				},
 			},
