@@ -18,7 +18,6 @@ package extension
 
 import (
 	"encoding/json"
-
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -125,6 +124,7 @@ func GetNodeCPUSharePools(nodeTopoAnnotations map[string]string) ([]CPUSharedPoo
 	if err != nil {
 		return nil, err
 	}
+
 	return cpuSharePools, nil
 }
 
