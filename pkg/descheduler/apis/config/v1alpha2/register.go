@@ -54,6 +54,8 @@ func init() {
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&DeschedulerConfiguration{},
+		&DefaultEvictorArgs{},
+		&RemovePodsViolatingNodeAffinityArgs{},
 		&MigrationControllerArgs{},
 		&LowNodeLoadArgs{},
 	)

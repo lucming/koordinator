@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -123,34 +124,112 @@ func TestIsNodeAddressTypeSupported(t *testing.T) {
 	}
 }
 
-func TestGetCPUsReservedByNode(t *testing.T) {
+func getReservedJson(reserved apiext.NodeReservation) string {
+	result := ""
+	resultBytes, err := json.Marshal(&reserved)
+	if err == nil {
+		result = string(resultBytes)
+	}
+
+	return result
+}
+
+func TestGetReservedByNodeAnno(t *testing.T) {
 	type args struct {
-		reserved string
+		anno map[string]string
 	}
 	tests := []struct {
-		name  string
-		args  args
-		want  resource.Quantity
-		want1 apiext.QoSClass
+		name string
+		args args
+		want corev1.ResourceList
 	}{
 		// TODO: Add test cases.
 		{
-			name: "demo1",
-			args: args{
-				reserved: `{"reservedResources":{"cpu":"1m"},"reservedCPUs":"0-4","QOSEffected":"LSE"}`,
+			name: "reserve nothing",
+			args: args{},
+			want: corev1.ResourceList{},
+		},
+		{
+			name: "reserve cpu only by quantity",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
+				})}},
+			want: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
+		},
+		{
+			name: "reserve cpu only by specific cpus",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					SpecificCPUs: "0-1",
+				})}},
+			want: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")},
+		},
+		{
+			name: "reserve cpu by specific cpus and quantity",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources:    corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
+					SpecificCPUs: "0-1",
+				})}},
+			want: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")},
+		},
+		{
+			name: "reserve memory by quantity",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("10")},
+				})}},
+			want: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("10")},
+		},
+		{
+			name: "reserve memory and cpu by quantity",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("10"),
+						corev1.ResourceCPU:    resource.MustParse("10"),
+					},
+				})}},
+			want: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("10"),
+				corev1.ResourceCPU:    resource.MustParse("10"),
 			},
-			want:  resource.MustParse("5"),
-			want1: apiext.QoSLSE,
+		},
+		{
+			name: "reserve memory by quantity and reserve cpu by specific cpus",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("10"),
+					},
+					SpecificCPUs: "0-1",
+				})}},
+			want: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("10"),
+				corev1.ResourceCPU:    resource.MustParse("2"),
+			},
+		},
+		{
+			name: "reserve memory by quantity, reserve cpu by specific cpus and quantity",
+			args: args{map[string]string{
+				apiext.AnnotationNodeReservation: getReservedJson(apiext.NodeReservation{
+					Resources: corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("10"),
+						corev1.ResourceCPU:    resource.MustParse("5"),
+					},
+					SpecificCPUs: "0-1",
+				})}},
+			want: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("10"),
+				corev1.ResourceCPU:    resource.MustParse("2"),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := GetCPUsReservedByNode(tt.args.reserved)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetCPUsReservedByNode() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("GetCPUsReservedByNode() got1 = %v, want %v", got1, tt.want1)
+			if got := GetReservedByNodeAnno(tt.args.anno); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetReservedByNodeAnno() = %v, want %v", got, tt.want)
 			}
 		})
 	}

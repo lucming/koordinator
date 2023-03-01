@@ -17,15 +17,16 @@ limitations under the License.
 package plugins
 
 import (
-	"github.com/koordinator-sh/koordinator/pkg/descheduler/framework/plugins/kubernetes"
+	"github.com/koordinator-sh/koordinator/pkg/descheduler/framework/plugins/defaultevictor"
 	"github.com/koordinator-sh/koordinator/pkg/descheduler/framework/plugins/loadaware"
+	"github.com/koordinator-sh/koordinator/pkg/descheduler/framework/plugins/removepodsviolatingnodeaffinity"
 	"github.com/koordinator-sh/koordinator/pkg/descheduler/framework/runtime"
 )
 
 func NewInTreeRegistry() runtime.Registry {
-	registry := runtime.Registry{
-		loadaware.LowNodeLoadName: loadaware.NewLowNodeLoad,
+	return runtime.Registry{
+		removepodsviolatingnodeaffinity.PluginName: removepodsviolatingnodeaffinity.New,
+		defaultevictor.PluginName:                  defaultevictor.New,
+		loadaware.LowLoadUtilizationName:           loadaware.NewLowNodeLoad,
 	}
-	kubernetes.SetupK8sDeschedulerPlugins(registry)
-	return registry
 }

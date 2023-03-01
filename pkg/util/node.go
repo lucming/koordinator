@@ -57,66 +57,27 @@ func IsNodeAddressTypeSupported(addrType corev1.NodeAddressType) bool {
 	return false
 }
 
-// GetCPUsReservedByNodeAnno gets reserved cpus by annotation of node.
-func GetCPUsReservedByNodeAnno(anno map[string]string) (corev1.ResourceList, error) {
+func GetReservedByNodeAnno(anno map[string]string) corev1.ResourceList {
 	rl := make(corev1.ResourceList)
-
-	if reserved, ok := anno[apiext.ReservedByNode]; ok {
-		cpuReservedByNode, qos := GetCPUsReservedByNode(reserved)
-		if qos == apiext.QoSLSE {
-			rl[corev1.ResourceCPU] = cpuReservedByNode
-		}
+	reserved, ok := anno[apiext.AnnotationNodeReservation]
+	if !ok {
+		return rl
 	}
 
-	return rl, nil
-}
-
-func GetCPUsReservedByNode(reserved string) (resource.Quantity, apiext.QoSClass) {
-	cpuReservedByNode := *resource.NewMilliQuantity(0, resource.DecimalSI)
-	reservedObj := apiext.KoordReserved{}
-	qos := apiext.QoSNone
-
+	reservedObj := apiext.NodeReservation{}
 	if err := json.Unmarshal([]byte(reserved), &reservedObj); err != nil {
 		klog.Errorf("Failed to unmarshal cpus reserved by node annotation. err=%v.\n", err)
-		return cpuReservedByNode, qos
+		return rl
 	}
 
-	if reservedcpu, ok := reservedObj.ReservedResources[corev1.ResourceCPU]; ok {
-		cpuReservedByNode = reservedcpu
+	if reservedObj.Resources != nil {
+		rl = reservedObj.Resources
 	}
-	if reservedObj.ReservedCPUs != "" {
-		if cpus, err := cpuset.Parse(reservedObj.ReservedCPUs); err == nil {
-			cpuReservedByNode = resource.MustParse(strconv.Itoa(cpus.Size()))
+	if reservedObj.SpecificCPUs != "" {
+		if cpus, err := cpuset.Parse(reservedObj.SpecificCPUs); err == nil {
+			rl[corev1.ResourceCPU] = resource.MustParse(strconv.Itoa(cpus.Size()))
 		}
 	}
 
-	return cpuReservedByNode, reservedObj.QOSEffected
-}
-
-// RemoveNodeReservedCPUs filter out cpus that reserved by annotation of node.
-func RemoveNodeReservedCPUs(cpuSharePools []apiext.CPUSharedPool, cpusReservedByNodeAnno string) []apiext.CPUSharedPool {
-	if cpusReservedByNodeAnno == "" {
-		return cpuSharePools
-	}
-
-	newCPUSharePools := make([]apiext.CPUSharedPool, len(cpuSharePools))
-	for idx, val := range cpuSharePools {
-		newCPUSharePools[idx] = val
-	}
-
-	reservedCPUs, err := cpuset.Parse(cpusReservedByNodeAnno)
-	if err != nil {
-		return newCPUSharePools
-	}
-
-	for idx, pool := range cpuSharePools {
-		originCPUs, err := cpuset.Parse(pool.CPUSet)
-		if err != nil {
-			return newCPUSharePools
-		}
-
-		newCPUSharePools[idx].CPUSet = originCPUs.Difference(reservedCPUs).String()
-	}
-
-	return newCPUSharePools
+	return rl
 }

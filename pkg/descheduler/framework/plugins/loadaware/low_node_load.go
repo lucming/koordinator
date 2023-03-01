@@ -45,7 +45,7 @@ import (
 )
 
 const (
-	LowNodeLoadName = "LowNodeLoad"
+	LowLoadUtilizationName = "LowNodeLoad"
 )
 
 var _ framework.BalancePlugin = &LowNodeLoad{}
@@ -121,7 +121,7 @@ func NewLowNodeLoad(args runtime.Object, handle framework.Handle) (framework.Plu
 
 // Name retrieves the plugin name
 func (pl *LowNodeLoad) Name() string {
-	return LowNodeLoadName
+	return LowLoadUtilizationName
 }
 
 // TODO(joseph): Do we need to consider filtering out nodes of certain specifications?

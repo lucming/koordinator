@@ -79,7 +79,8 @@ func validatePluginConfig(path *field.Path, profile *config.DeschedulerProfile) 
 	var errs []error
 	m := map[string]interface{}{
 		// NOTE: you can add the in-tree plugins configuration validation function
-		names.MigrationController: ValidateMigrationControllerArgs,
+		names.MigrationController:         ValidateMigrationControllerArgs,
+		"RemovePodsViolatingNodeAffinity": ValidateRemovePodsViolatingNodeAffinityArgs,
 	}
 
 	seenPluginConfig := make(sets.String)

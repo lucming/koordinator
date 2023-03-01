@@ -124,7 +124,7 @@ func (r *NodeResourceReconciler) isGPUResourceNeedSync(new, old *corev1.Node) bo
 		return true
 	}
 
-	for _, resourceName := range []corev1.ResourceName{extension.ResourceGPUCore, extension.ResourceGPUMemoryRatio, extension.ResourceGPUMemory, extension.ResourceGPU} {
+	for _, resourceName := range []corev1.ResourceName{extension.GPUCore, extension.GPUMemoryRatio, extension.GPUMemory, extension.KoordGPU} {
 		if util.IsResourceDiff(old.Status.Allocatable, new.Status.Allocatable, resourceName, *strategy.ResourceDiffThreshold) {
 			klog.V(4).Infof("node %v resource diff bigger than %v, need sync", resourceName, *strategy.ResourceDiffThreshold)
 			return true
@@ -134,34 +134,42 @@ func (r *NodeResourceReconciler) isGPUResourceNeedSync(new, old *corev1.Node) bo
 }
 
 func (r *NodeResourceReconciler) isGPULabelNeedSync(new, old map[string]string) bool {
-	return new[extension.LabelGPUModel] != old[extension.LabelGPUModel] ||
-		new[extension.LabelGPUDriverVersion] != old[extension.LabelGPUDriverVersion]
+	return new[extension.GPUModel] != old[extension.GPUModel] ||
+		new[extension.GPUDriver] != old[extension.GPUDriver]
 }
 
 func (r *NodeResourceReconciler) updateGPUNodeResource(node *corev1.Node, device *schedulingv1alpha1.Device) error {
 	if device == nil {
 		return nil
 	}
-	gpuResources := make(corev1.ResourceList)
-	totalKoordGPU := resource.NewQuantity(0, resource.DecimalSI)
+	memoryTotal := resource.NewQuantity(0, resource.BinarySI)
+	coreTotal := resource.NewQuantity(0, resource.DecimalSI)
+	ratioTotal := resource.NewQuantity(0, resource.DecimalSI)
+	koordGpuTotal := resource.NewQuantity(0, resource.DecimalSI)
 	hasGPUDevice := false
 	for _, device := range device.Spec.Devices {
-		if device.Type != schedulingv1alpha1.GPU || !device.Health {
+		if device.Type != schedulingv1alpha1.GPU {
 			continue
 		}
 		hasGPUDevice = true
-		resources := extension.TransformDeprecatedDeviceResources(device.Resources)
-		util.AddResourceList(gpuResources, resources)
-		totalKoordGPU.Add(resources[extension.ResourceGPUCore])
+		if device.Health {
+			memoryTotal.Add(device.Resources[extension.GPUMemory])
+			coreTotal.Add(device.Resources[extension.GPUCore])
+			ratioTotal.Add(device.Resources[extension.GPUMemoryRatio])
+			koordGpuTotal.Add(device.Resources[extension.GPUCore])
+		}
 	}
-	gpuResources[extension.ResourceGPU] = *totalKoordGPU
 
 	if !hasGPUDevice {
 		return nil
 	}
 
 	copyNode := node.DeepCopy()
-	util.AddResourceList(copyNode.Status.Allocatable, gpuResources)
+	copyNode.Status.Allocatable[extension.GPUCore] = *coreTotal
+	copyNode.Status.Allocatable[extension.GPUMemory] = *memoryTotal
+	copyNode.Status.Allocatable[extension.GPUMemoryRatio] = *ratioTotal
+	copyNode.Status.Allocatable[extension.KoordGPU] = *koordGpuTotal
+
 	if !r.isGPUResourceNeedSync(copyNode, node) {
 		return nil
 	}
@@ -177,8 +185,15 @@ func (r *NodeResourceReconciler) updateGPUNodeResource(node *corev1.Node, device
 		}
 
 		updateNode = updateNode.DeepCopy() // avoid overwriting the cache
-		util.AddResourceList(updateNode.Status.Capacity, gpuResources)
-		util.AddResourceList(updateNode.Status.Allocatable, gpuResources)
+
+		updateNode.Status.Capacity[extension.GPUMemory] = *memoryTotal
+		updateNode.Status.Allocatable[extension.GPUMemory] = *memoryTotal
+		updateNode.Status.Capacity[extension.GPUCore] = *coreTotal
+		updateNode.Status.Allocatable[extension.GPUCore] = *coreTotal
+		updateNode.Status.Capacity[extension.GPUMemoryRatio] = *ratioTotal
+		updateNode.Status.Allocatable[extension.GPUMemoryRatio] = *ratioTotal
+		updateNode.Status.Capacity[extension.KoordGPU] = *koordGpuTotal
+		updateNode.Status.Allocatable[extension.KoordGPU] = *koordGpuTotal
 
 		if err := r.Client.Status().Update(context.TODO(), updateNode); err != nil {
 			klog.Errorf("failed to update node gpu resource, %v, error: %v", updateNode.Name, err)
@@ -215,8 +230,8 @@ func (r *NodeResourceReconciler) updateGPUDriverAndModel(node *corev1.Node, devi
 		if updateNodeNew.Labels == nil {
 			updateNodeNew.Labels = make(map[string]string)
 		}
-		updateNodeNew.Labels[extension.LabelGPUModel] = device.Labels[extension.LabelGPUModel]
-		updateNodeNew.Labels[extension.LabelGPUDriverVersion] = device.Labels[extension.LabelGPUDriverVersion]
+		updateNodeNew.Labels[extension.GPUModel] = device.Labels[extension.GPUModel]
+		updateNodeNew.Labels[extension.GPUDriver] = device.Labels[extension.GPUDriver]
 
 		patch := client.MergeFrom(updateNode)
 		if err := r.Client.Patch(context.Background(), updateNodeNew, patch); err != nil {
@@ -224,7 +239,7 @@ func (r *NodeResourceReconciler) updateGPUDriverAndModel(node *corev1.Node, devi
 			return err
 		} else {
 			klog.Infof("Success to patch node:%v gpu model:%v and version:%v",
-				node.Name, device.Labels[extension.LabelGPUModel], device.Labels[extension.LabelGPUDriverVersion])
+				node.Name, device.Labels[extension.GPUModel], device.Labels[extension.GPUDriver])
 		}
 		return nil
 	})

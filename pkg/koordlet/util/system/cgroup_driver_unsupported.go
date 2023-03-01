@@ -26,7 +26,3 @@ func GuessCgroupDriverFromCgroupName() CgroupDriverType {
 func GuessCgroupDriverFromKubeletPort(int) (CgroupDriverType, error) {
 	return kubeletDefaultCgroupDriver, nil
 }
-
-func IsUsingCgroupsV2() bool {
-	return false
-}

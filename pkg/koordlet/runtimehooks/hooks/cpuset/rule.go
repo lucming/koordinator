@@ -17,7 +17,6 @@ limitations under the License.
 package cpuset
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -31,7 +30,7 @@ import (
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/runtimehooks/protocol"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/statesinformer"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/util"
-	pkgutil "github.com/koordinator-sh/koordinator/pkg/util"
+	"github.com/koordinator-sh/koordinator/pkg/util/cpuset"
 )
 
 type cpusetRule struct {
@@ -107,13 +106,9 @@ func (p *cpusetPlugin) parseRule(nodeTopoIf interface{}) (bool, error) {
 	}
 
 	// remove cpus that already reserved by node.annotation.
-	cpusReserved := ext.KoordReserved{}
-	if val, ok := nodeTopo.Annotations[ext.ReservedByNode]; ok {
-		if err := json.Unmarshal([]byte(val), &cpusReserved); err != nil {
-			return false, fmt.Errorf("failed to unmarshal reserved resources from node.annotation in runtimehook.err:%v", err)
-		}
-	}
-	cpuSharePools = pkgutil.RemoveNodeReservedCPUs(cpuSharePools, cpusReserved.ReservedCPUs)
+	cpusReserved := ext.GetCPUsReservedByTopoAnno(nodeTopo.Annotations)
+	cpusetReserved := cpuset.MustParse(cpusReserved)
+	cpuSharePools = removeNodeReservedCPUs(cpuSharePools, cpusetReserved)
 
 	cpuManagerPolicy, err := ext.GetKubeletCPUManagerPolicy(nodeTopo.Annotations)
 	if err != nil {
@@ -125,6 +120,25 @@ func (p *cpusetPlugin) parseRule(nodeTopoIf interface{}) (bool, error) {
 	}
 	updated := p.updateRule(newRule)
 	return updated, nil
+}
+
+// removeNodeReservedCPUs filter out cpus that reserved by annotation of node.
+func removeNodeReservedCPUs(cpuSharePools []ext.CPUSharedPool, reservedCPUs cpuset.CPUSet) []ext.CPUSharedPool {
+	newCPUSharePools := make([]ext.CPUSharedPool, len(cpuSharePools))
+	for idx, val := range cpuSharePools {
+		newCPUSharePools[idx] = val
+	}
+
+	for idx, pool := range cpuSharePools {
+		originCPUs, err := cpuset.Parse(pool.CPUSet)
+		if err != nil {
+			return newCPUSharePools
+		}
+
+		newCPUSharePools[idx].CPUSet = originCPUs.Difference(reservedCPUs).String()
+	}
+
+	return newCPUSharePools
 }
 
 func (p *cpusetPlugin) ruleUpdateCb(pods []*statesinformer.PodMeta) error {

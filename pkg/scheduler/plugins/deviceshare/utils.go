@@ -36,9 +36,9 @@ const (
 )
 
 var DeviceResourceNames = map[schedulingv1alpha1.DeviceType][]corev1.ResourceName{
-	schedulingv1alpha1.GPU:  {apiext.ResourceNvidiaGPU, apiext.ResourceGPU, apiext.ResourceGPUCore, apiext.ResourceGPUMemory, apiext.ResourceGPUMemoryRatio},
-	schedulingv1alpha1.RDMA: {apiext.ResourceRDMA},
-	schedulingv1alpha1.FPGA: {apiext.ResourceFPGA},
+	schedulingv1alpha1.GPU:  {apiext.NvidiaGPU, apiext.KoordGPU, apiext.GPUCore, apiext.GPUMemory, apiext.GPUMemoryRatio},
+	schedulingv1alpha1.RDMA: {apiext.KoordRDMA},
+	schedulingv1alpha1.FPGA: {apiext.KoordFPGA},
 }
 
 func hasDeviceResource(podRequest corev1.ResourceList, deviceType schedulingv1alpha1.DeviceType) bool {
@@ -62,14 +62,14 @@ func validateCommonDeviceRequest(podRequest corev1.ResourceList, deviceType sche
 	var commonDevice resource.Quantity
 	switch deviceType {
 	case schedulingv1alpha1.FPGA:
-		commonDevice = podRequest[apiext.ResourceFPGA]
+		commonDevice = podRequest[apiext.KoordFPGA]
 	case schedulingv1alpha1.RDMA:
-		commonDevice = podRequest[apiext.ResourceRDMA]
+		commonDevice = podRequest[apiext.KoordRDMA]
 	default:
 		return fmt.Errorf("device type %v is not supported yet", deviceType)
 	}
 	if commonDevice.Value() > 100 && commonDevice.Value()%100 != 0 {
-		return fmt.Errorf("failed to validate %v%v: %v", apiext.DomainPrefix, deviceType, commonDevice.Value())
+		return fmt.Errorf("failed to validate %v%v: %v", apiext.ResourceDomainPrefix, deviceType, commonDevice.Value())
 	}
 	return nil
 }
@@ -84,28 +84,28 @@ var ValidateGPURequest = func(podRequest corev1.ResourceList) (uint, error) {
 		return gpuCombination, fmt.Errorf("pod request should not be empty")
 	}
 
-	if _, exist := podRequest[apiext.ResourceNvidiaGPU]; exist {
+	if _, exist := podRequest[apiext.NvidiaGPU]; exist {
 		gpuCombination |= NvidiaGPUExist
 	}
-	if koordGPU, exist := podRequest[apiext.ResourceGPU]; exist {
+	if koordGPU, exist := podRequest[apiext.KoordGPU]; exist {
 		if koordGPU.Value() > 100 && koordGPU.Value()%100 != 0 {
-			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.ResourceGPU, koordGPU.Value())
+			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.KoordGPU, koordGPU.Value())
 		}
 		gpuCombination |= KoordGPUExist
 	}
-	if gpuCore, exist := podRequest[apiext.ResourceGPUCore]; exist {
+	if gpuCore, exist := podRequest[apiext.GPUCore]; exist {
 		// koordinator.sh/gpu-core should be something like: 25, 50, 75, 100, 200, 300
 		if gpuCore.Value() > 100 && gpuCore.Value()%100 != 0 {
-			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.ResourceGPUCore, gpuCore.Value())
+			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.GPUCore, gpuCore.Value())
 		}
 		gpuCombination |= GPUCoreExist
 	}
-	if _, exist := podRequest[apiext.ResourceGPUMemory]; exist {
+	if _, exist := podRequest[apiext.GPUMemory]; exist {
 		gpuCombination |= GPUMemoryExist
 	}
-	if gpuMemRatio, exist := podRequest[apiext.ResourceGPUMemoryRatio]; exist {
+	if gpuMemRatio, exist := podRequest[apiext.GPUMemoryRatio]; exist {
 		if gpuMemRatio.Value() > 100 && gpuMemRatio.Value()%100 != 0 {
-			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.ResourceGPUMemoryRatio, gpuMemRatio.Value())
+			return gpuCombination, fmt.Errorf("failed to validate %v: %v", apiext.GPUMemoryRatio, gpuMemRatio.Value())
 		}
 		gpuCombination |= GPUMemoryRatioExist
 	}
@@ -128,15 +128,15 @@ func convertCommonDeviceResource(podRequest corev1.ResourceList, deviceType sche
 	var resources corev1.ResourceList
 	switch deviceType {
 	case schedulingv1alpha1.RDMA:
-		if value, ok := podRequest[apiext.ResourceRDMA]; ok {
+		if value, ok := podRequest[apiext.KoordRDMA]; ok {
 			resources = corev1.ResourceList{
-				apiext.ResourceRDMA: value,
+				apiext.KoordRDMA: value,
 			}
 		}
 	case schedulingv1alpha1.FPGA:
-		if value, ok := podRequest[apiext.ResourceFPGA]; ok {
+		if value, ok := podRequest[apiext.KoordFPGA]; ok {
 			resources = corev1.ResourceList{
-				apiext.ResourceFPGA: value,
+				apiext.KoordFPGA: value,
 			}
 		}
 	default:
@@ -146,9 +146,9 @@ func convertCommonDeviceResource(podRequest corev1.ResourceList, deviceType sche
 	return resources
 }
 
-// ConvertGPUResource will convert either nvidia.com/gpu or koordinator.sh/gpu to koordinator.sh/gpu-core and koordinator.sh/gpu-memory-ratio
 // nvidia.com/gpu means applying for full-card
 // koordinator.sh/gpu means applying for cards in percentile
+// ConvertGPUResource will convert either nvidia.com/gpu or koordinator.sh/gpu to koordinator.sh/gpu-core and koordinator.sh/gpu-memory-ratio
 var ConvertGPUResource = func(podRequest corev1.ResourceList, combination uint) corev1.ResourceList {
 	if podRequest == nil || len(podRequest) == 0 {
 		klog.Warningf("pod request should not be empty")
@@ -157,24 +157,24 @@ var ConvertGPUResource = func(podRequest corev1.ResourceList, combination uint) 
 	switch combination {
 	case GPUCoreExist | GPUMemoryExist:
 		return corev1.ResourceList{
-			apiext.ResourceGPUCore:   podRequest[apiext.ResourceGPUCore],
-			apiext.ResourceGPUMemory: podRequest[apiext.ResourceGPUMemory],
+			apiext.GPUCore:   podRequest[apiext.GPUCore],
+			apiext.GPUMemory: podRequest[apiext.GPUMemory],
 		}
 	case GPUCoreExist | GPUMemoryRatioExist:
 		return corev1.ResourceList{
-			apiext.ResourceGPUCore:        podRequest[apiext.ResourceGPUCore],
-			apiext.ResourceGPUMemoryRatio: podRequest[apiext.ResourceGPUMemoryRatio],
+			apiext.GPUCore:        podRequest[apiext.GPUCore],
+			apiext.GPUMemoryRatio: podRequest[apiext.GPUMemoryRatio],
 		}
 	case KoordGPUExist:
 		return corev1.ResourceList{
-			apiext.ResourceGPUCore:        podRequest[apiext.ResourceGPU],
-			apiext.ResourceGPUMemoryRatio: podRequest[apiext.ResourceGPU],
+			apiext.GPUCore:        podRequest[apiext.KoordGPU],
+			apiext.GPUMemoryRatio: podRequest[apiext.KoordGPU],
 		}
 	case NvidiaGPUExist:
-		nvidiaGpu := podRequest[apiext.ResourceNvidiaGPU]
+		nvidiaGpu := podRequest[apiext.NvidiaGPU]
 		return corev1.ResourceList{
-			apiext.ResourceGPUCore:        *resource.NewQuantity(nvidiaGpu.Value()*100, resource.DecimalSI),
-			apiext.ResourceGPUMemoryRatio: *resource.NewQuantity(nvidiaGpu.Value()*100, resource.DecimalSI),
+			apiext.GPUCore:        *resource.NewQuantity(nvidiaGpu.Value()*100, resource.DecimalSI),
+			apiext.GPUMemoryRatio: *resource.NewQuantity(nvidiaGpu.Value()*100, resource.DecimalSI),
 		}
 	}
 	return nil
@@ -187,10 +187,10 @@ func isMultipleCommonDevicePod(podRequest corev1.ResourceList, deviceType schedu
 	}
 	switch deviceType {
 	case schedulingv1alpha1.RDMA:
-		rdma := podRequest[apiext.ResourceRDMA]
+		rdma := podRequest[apiext.KoordRDMA]
 		return rdma.Value() > 100 && rdma.Value()%100 == 0
 	case schedulingv1alpha1.FPGA:
-		fpga := podRequest[apiext.ResourceFPGA]
+		fpga := podRequest[apiext.KoordFPGA]
 		return fpga.Value() > 100 && fpga.Value()%100 == 0
 	default:
 		return false
@@ -202,7 +202,7 @@ func isMultipleGPUPod(podRequest corev1.ResourceList) bool {
 		klog.Warningf("pod request should not be empty")
 		return false
 	}
-	gpuCore := podRequest[apiext.ResourceGPUCore]
+	gpuCore := podRequest[apiext.GPUCore]
 	return gpuCore.Value() > 100 && gpuCore.Value()%100 == 0
 }
 
@@ -229,7 +229,7 @@ func patchContainerGPUResource(pod *corev1.Pod, podRequest corev1.ResourceList) 
 			}
 		}
 		if needPatch {
-			for _, v := range []corev1.ResourceName{apiext.ResourceGPUCore, apiext.ResourceGPUMemory, apiext.ResourceGPUMemoryRatio} {
+			for _, v := range []corev1.ResourceName{apiext.GPUCore, apiext.GPUMemory, apiext.GPUMemoryRatio} {
 				reqs[v] = podRequest[v]
 			}
 			break
@@ -247,10 +247,10 @@ func fillGPUTotalMem(nodeDeviceTotal deviceResources, podRequest corev1.Resource
 	}
 
 	// a node can only contain one type of GPU, so each of them has the same total memory.
-	if gpuMem, ok := podRequest[apiext.ResourceGPUMemory]; ok {
-		podRequest[apiext.ResourceGPUMemoryRatio] = memBytesToRatio(gpuMem, nodeDeviceTotal[activeMinor][apiext.ResourceGPUMemory])
+	if gpuMem, ok := podRequest[apiext.GPUMemory]; ok {
+		podRequest[apiext.GPUMemoryRatio] = memBytesToRatio(gpuMem, nodeDeviceTotal[activeMinor][apiext.GPUMemory])
 	} else {
-		gpuMemRatio := podRequest[apiext.ResourceGPUMemoryRatio]
-		podRequest[apiext.ResourceGPUMemory] = memRatioToBytes(gpuMemRatio, nodeDeviceTotal[activeMinor][apiext.ResourceGPUMemory])
+		gpuMemRatio := podRequest[apiext.GPUMemoryRatio]
+		podRequest[apiext.GPUMemory] = memRatioToBytes(gpuMemRatio, nodeDeviceTotal[activeMinor][apiext.GPUMemory])
 	}
 }

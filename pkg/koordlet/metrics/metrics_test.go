@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiext "github.com/koordinator-sh/koordinator/apis/extension"
+	koordletutil "github.com/koordinator-sh/koordinator/pkg/koordlet/util"
 	"github.com/koordinator-sh/koordinator/pkg/koordlet/util/system"
 	"github.com/koordinator-sh/koordinator/pkg/util"
 )
@@ -76,7 +77,7 @@ func TestCommonCollectors(t *testing.T) {
 			UID:       "test01",
 		},
 	}
-	testingPSI := &system.PSIByResource{
+	testingPSI := &koordletutil.PSIByResource{
 		CPU: system.PSIStats{
 			Some: &system.PSILine{
 				Avg10:  1,

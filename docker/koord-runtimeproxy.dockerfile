@@ -15,4 +15,4 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o koord-runtime-proxy cmd
 FROM gcr.io/distroless/static:latest
 WORKDIR /
 COPY --from=builder /go/src/github.com/koordinator-sh/koordinator/koord-runtime-proxy .
-ENTRYPOINT ["/koord-runtime-proxy"]
+ENTRYPOINT ["/koord-runtime-proxy","--backend-runtime-mode=Docker","--remote-runtime-service-endpoint=/var/run/docker.sock"]

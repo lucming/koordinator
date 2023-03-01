@@ -24,7 +24,6 @@ import (
 
 type PriorityClass string
 
-// https://koordinator.sh/docs/architecture/priority/
 const (
 	PriorityProd  PriorityClass = "koord-prod"
 	PriorityMid   PriorityClass = "koord-mid"

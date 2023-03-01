@@ -45,16 +45,16 @@ const (
 	evictPodAnnotationKey = "descheduler.alpha.kubernetes.io/evict"
 )
 
-type nodePodEvictedCount map[string]uint
-type namespacePodEvictCount map[string]uint
+type nodePodEvictedCount map[string]int
+type namespacePodEvictCount map[string]int
 
 type PodEvictor struct {
 	client                     clientset.Interface
 	eventRecorder              events.EventRecorder
 	policyGroupVersion         string
 	dryRun                     bool
-	maxPodsToEvictPerNode      *uint
-	maxPodsToEvictPerNamespace *uint
+	maxPodsToEvictPerNode      *int
+	maxPodsToEvictPerNamespace *int
 	lock                       sync.Mutex
 	totalCount                 int
 	nodepodCount               nodePodEvictedCount
@@ -66,8 +66,8 @@ func NewPodEvictor(
 	eventRecorder events.EventRecorder,
 	policyGroupVersion string,
 	dryRun bool,
-	maxPodsToEvictPerNode *uint,
-	maxPodsToEvictPerNamespace *uint,
+	maxPodsToEvictPerNode *int,
+	maxPodsToEvictPerNamespace *int,
 ) *PodEvictor {
 	return &PodEvictor{
 		client:                     client,
@@ -76,19 +76,19 @@ func NewPodEvictor(
 		dryRun:                     dryRun,
 		maxPodsToEvictPerNode:      maxPodsToEvictPerNode,
 		maxPodsToEvictPerNamespace: maxPodsToEvictPerNamespace,
-		nodepodCount:               make(nodePodEvictedCount),
-		namespacePodCount:          make(namespacePodEvictCount),
+		nodepodCount:               make(map[string]int),
+		namespacePodCount:          make(map[string]int),
 	}
 }
 
 // NodeEvicted gives a number of pods evicted for node
-func (pe *PodEvictor) NodeEvicted(nodeName string) uint {
+func (pe *PodEvictor) NodeEvicted(nodeName string) int {
 	pe.lock.Lock()
 	defer pe.lock.Unlock()
 	return pe.nodepodCount[nodeName]
 }
 
-func (pe *PodEvictor) NamespaceEvicted(namespace string) uint {
+func (pe *PodEvictor) NamespaceEvicted(namespace string) int {
 	pe.lock.Lock()
 	defer pe.lock.Unlock()
 	return pe.namespacePodCount[namespace]

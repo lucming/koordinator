@@ -31,7 +31,6 @@ import (
 )
 
 func Test_GetRootCgroupCPUSetDirWithSystemdDriver(t *testing.T) {
-	system.UseCgroupsV2 = false
 	system.SetupCgroupPathFormatter(system.Systemd)
 	defer system.SetupCgroupPathFormatter(system.Systemd)
 	tests := []struct {
@@ -72,7 +71,6 @@ func Test_GetRootCgroupCPUSetDirWithSystemdDriver(t *testing.T) {
 }
 
 func Test_GetRootCgroupCPUSetDirWithCgroupfsDriver(t *testing.T) {
-	system.UseCgroupsV2 = false
 	system.SetupCgroupPathFormatter(system.Cgroupfs)
 	defer system.SetupCgroupPathFormatter(system.Systemd)
 	tests := []struct {
@@ -136,7 +134,6 @@ func Test_GetRootCgroupCurCPUSet(t *testing.T) {
 
 	wantCPUSet := []int32{1, 2}
 
-	system.UseCgroupsV2 = false
 	gotCPUSet, err := GetRootCgroupCurCPUSet(corev1.PodQOSGuaranteed)
 	if err != nil {
 		t.Errorf("failed to GetRootCgroupCurCPUSet, err: %v", err)

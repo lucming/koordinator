@@ -20,7 +20,7 @@ import corev1 "k8s.io/api/core/v1"
 
 const (
 	DomainPrefix = "koordinator.sh/"
-	// ResourceDomainPrefix is a prefix "kubernetes.io/" used by particular extend resources (e.g. batch resources)
+	// use prefix "kubernetes.io/" for extend resource
 	ResourceDomainPrefix = corev1.ResourceDefaultNamespacePrefix
 	// SchedulingDomainPrefix represents the scheduling domain prefix
 	SchedulingDomainPrefix = "scheduling.koordinator.sh"

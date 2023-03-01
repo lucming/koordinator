@@ -43,7 +43,6 @@ import (
 
 	// test sources
 	_ "github.com/koordinator-sh/koordinator/test/e2e/scheduling"
-	_ "github.com/koordinator-sh/koordinator/test/e2e/slocontroller"
 )
 
 // handleFlags sets up all flags and parses the command line.
