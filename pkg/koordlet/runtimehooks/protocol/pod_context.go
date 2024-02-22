@@ -177,6 +177,14 @@ func (p *PodContext) NriDone(executor resourceexecutor.ResourceUpdateExecutor) {
 	p.Update()
 }
 
+func (p *PodContext) NriRemoveDone(executor resourceexecutor.ResourceUpdateExecutor) {
+	if p.executor == nil {
+		p.executor = executor
+	}
+	p.removeForExt()
+	p.Update()
+}
+
 func (p *PodContext) FromReconciler(podMeta *statesinformer.PodMeta) {
 	p.Request.FromReconciler(podMeta)
 }
@@ -277,4 +285,22 @@ func (p *PodContext) injectForExt() {
 				p.Request.PodMeta.Namespace, p.Request.PodMeta.Name, *p.Response.Resources.MemoryLimit, p.Request.CgroupParent)
 		}
 	}
+
+	if p.Response.Resources.NetClsClassId != nil {
+		eventHelper := audit.V(3).Pod(p.Request.PodMeta.Namespace, p.Request.PodMeta.Name).Reason("runtime-hooks").Message(
+			"set pod net class id to %v", *p.Response.Resources.NetClsClassId)
+		updater, err := injectNetClsClassId(p.Request.CgroupParent, *p.Response.Resources.NetClsClassId, eventHelper, p.executor)
+		if err != nil {
+			klog.Infof("set pod %v/%v net class id %v on cgroup parent %v failed, error %v", p.Request.PodMeta.Namespace,
+				p.Request.PodMeta.Name, *p.Response.Resources.NetClsClassId, p.Request.CgroupParent, err)
+		} else {
+			p.updaters = append(p.updaters, updater)
+			klog.V(5).Infof("set pod %v/%v net class id %v on cgroup parent %v",
+				p.Request.PodMeta.Namespace, p.Request.PodMeta.Name, *p.Response.Resources.NetClsClassId, p.Request.CgroupParent)
+		}
+	}
+}
+
+func (p *PodContext) removeForExt() {
+	// TODO: cleanup
 }

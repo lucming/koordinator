@@ -23,9 +23,9 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
+	"github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/coscheduling/util"
 )
@@ -292,10 +292,10 @@ func (gang *Gang) getGangTotalNum() int {
 	return gang.TotalChildrenNum
 }
 
-func (gang *Gang) getBoundPodNum() int {
+func (gang *Gang) getBoundPodNum() int32 {
 	gang.lock.Lock()
 	defer gang.lock.Unlock()
-	return len(gang.BoundChildren)
+	return int32(len(gang.BoundChildren))
 }
 
 func (gang *Gang) getGangMode() string {
