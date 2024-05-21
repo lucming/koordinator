@@ -23,9 +23,9 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
+	"github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/coscheduling/util"
 )
@@ -88,6 +88,7 @@ func NewGang(gangName string) *Gang {
 		BoundChildren:          make(map[string]*v1.Pod),
 		GangFrom:               GangFromPodAnnotation,
 		HasGangInit:            false,
+		GangGroupInfo:          NewGangGroupInfo("", nil),
 	}
 }
 
@@ -230,7 +231,7 @@ func (gang *Gang) SetGangGroupInfo(gangGroupInfo *GangGroupInfo) {
 	gang.lock.Lock()
 	defer gang.lock.Unlock()
 
-	if gang.GangGroupInfo == nil {
+	if !gang.GangGroupInfo.IsInitialized() {
 		gang.GangGroupInfo = gangGroupInfo
 		klog.Infof("SetGangGroupInfo done, gangName: %v, groupSlice: %v, gangGroupId: %v",
 			gang.Name, gang.GangGroup, gang.GangGroupId)
@@ -291,10 +292,10 @@ func (gang *Gang) getGangTotalNum() int {
 	return gang.TotalChildrenNum
 }
 
-func (gang *Gang) getBoundPodNum() int {
+func (gang *Gang) getBoundPodNum() int32 {
 	gang.lock.Lock()
 	defer gang.lock.Unlock()
-	return len(gang.BoundChildren)
+	return int32(len(gang.BoundChildren))
 }
 
 func (gang *Gang) getGangMode() string {
@@ -486,7 +487,7 @@ func (gang *Gang) addBoundPod(pod *v1.Pod) {
 	gang.BoundChildren[podId] = pod
 
 	klog.Infof("AddBoundPod, gangName: %v, podName: %v", gang.Name, podId)
-	if len(gang.BoundChildren) >= gang.MinRequiredNumber {
+	if !gang.OnceResourceSatisfied && len(gang.BoundChildren) >= gang.MinRequiredNumber {
 		gang.OnceResourceSatisfied = true
 		klog.Infof("Gang ResourceSatisfied due to addBoundPod, gangName: %v", gang.Name)
 	}

@@ -22,10 +22,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
-	pgclientset "sigs.k8s.io/scheduler-plugins/pkg/generated/clientset/versioned"
-	pglister "sigs.k8s.io/scheduler-plugins/pkg/generated/listers/scheduling/v1alpha1"
 
+	"github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
+	pgclientset "github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/generated/clientset/versioned"
+	pglister "github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/generated/listers/scheduling/v1alpha1"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/coscheduling/util"
 	koordutil "github.com/koordinator-sh/koordinator/pkg/util"
@@ -61,6 +61,7 @@ func (gangCache *GangCache) getGangGroupInfo(gangGroupId string, gangGroup []str
 	if gangCache.gangGroupInfoMap[gangGroupId] == nil {
 		if createIfNotExist {
 			gangGroupInfo = NewGangGroupInfo(gangGroupId, gangGroup)
+			gangGroupInfo.SetInitialized()
 			gangCache.gangGroupInfoMap[gangGroupId] = gangGroupInfo
 			klog.Infof("add gangGroupInfo to cache, gangGroupId: %v", gangGroupId)
 		}
@@ -150,6 +151,8 @@ func (gangCache *GangCache) onPodAdd(obj interface{}) {
 		gang.addBoundPod(pod)
 		gang.setResourceSatisfied()
 	}
+
+	klog.Infof("watch pod created, Name:%v, pgLabel:%v", pod.Name, pod.Labels[v1alpha1.PodGroupLabel])
 }
 
 func (gangCache *GangCache) onPodUpdate(oldObj, newObj interface{}) {
@@ -202,6 +205,8 @@ func (gangCache *GangCache) onPodDelete(obj interface{}) {
 			gangCache.deleteGangGroupInfo(gang.GangGroupInfo.GangGroupId)
 		}
 	}
+
+	klog.Infof("watch pod deleted, Name:%v, pgLabel:%v", pod.Name, pod.Labels[v1alpha1.PodGroupLabel])
 }
 
 func (gangCache *GangCache) onPodGroupAdd(obj interface{}) {
@@ -222,6 +227,8 @@ func (gangCache *GangCache) onPodGroupAdd(obj interface{}) {
 	gang.SetGangGroupInfo(gangGroupInfo)
 	//reset already connected pods lastScheduleTime
 	gang.initAllChildrenPodLastScheduleTime()
+
+	klog.Infof("watch podGroup created, Name:%v", pg.Name)
 }
 
 func (gangCache *GangCache) onPodGroupUpdate(oldObj interface{}, newObj interface{}) {
@@ -271,4 +278,6 @@ func (gangCache *GangCache) onPodGroupDelete(obj interface{}) {
 	if allGangDeleted {
 		gangCache.deleteGangGroupInfo(gang.GangGroupInfo.GangGroupId)
 	}
+
+	klog.Infof("watch podGroup deleted, Name:%v", pg.Name)
 }

@@ -10,6 +10,7 @@ import (
 
 func TestGangGroupInfo_SetGangGroupInfo(t *testing.T) {
 	gangGroupInfo := NewGangGroupInfo("aa_bb", []string{"aa", "bb"})
+	gangGroupInfo.SetInitialized()
 	assert.Equal(t, "aa_bb", gangGroupInfo.GangGroupId)
 	assert.Equal(t, 2, len(gangGroupInfo.GangGroup))
 	assert.Equal(t, 1, gangGroupInfo.ScheduleCycle)
@@ -24,18 +25,27 @@ func TestGangGroupInfo_SetGangGroupInfo(t *testing.T) {
 	assert.Equal(t, 0, len(gangGroupInfo.ChildrenLastScheduleTime))
 
 	gang := &Gang{}
+	gang.GangGroupInfo = NewGangGroupInfo("", nil)
 	gang.Name = "aa"
 	gang.TotalChildrenNum = 2
 	gang.SetGangGroupInfo(gangGroupInfo)
 	assert.Equal(t, gang.GangGroupInfo.GangTotalChildrenNumMap["aa"], 2)
+
+	gang.BoundChildren = map[string]*corev1.Pod{
+		"pod1": {},
+		"pod2": {},
+	}
+	assert.Equal(t, int32(2), gang.getBoundPodNum())
 }
 
 func TestDeletePod(t *testing.T) {
 	gangGroupInfo := NewGangGroupInfo("aa_bb", []string{"aa", "bb"})
+	gangGroupInfo.SetInitialized()
 	gangGroupInfo.ChildrenScheduleRoundMap["test/pod1"] = 1
 	gangGroupInfo.ChildrenLastScheduleTime["test/pod1"] = time.Now()
 
 	gang := &Gang{}
+	gang.GangGroupInfo = NewGangGroupInfo("", nil)
 	gang.Name = "aa"
 	gang.TotalChildrenNum = 2
 	gang.SetGangGroupInfo(gangGroupInfo)
@@ -53,10 +63,12 @@ func TestDeletePod(t *testing.T) {
 
 func TestIsScheduleCycleValid_GetScheduleCycle_GetChildScheduleCycle_SetChildScheduleCycle(t *testing.T) {
 	gangGroupInfo := NewGangGroupInfo("aa_bb", []string{"aa", "bb"})
+	gangGroupInfo.SetInitialized()
 	gangGroupInfo.ChildrenScheduleRoundMap["test/pod1"] = 1
 	gangGroupInfo.ScheduleCycle = 2
 
 	gang := &Gang{}
+	gang.GangGroupInfo = NewGangGroupInfo("", nil)
 	gang.SetGangGroupInfo(gangGroupInfo)
 
 	pod := &corev1.Pod{}
@@ -76,9 +88,11 @@ func TestIsScheduleCycleValid_GetScheduleCycle_GetChildScheduleCycle_SetChildSch
 
 func TestInitPodLastScheduleTime_GetPodLastScheduleTime_ResetPodLastScheduleTime(t *testing.T) {
 	gangGroupInfo := NewGangGroupInfo("aa_bb", []string{"aa", "bb"})
+	gangGroupInfo.SetInitialized()
 	gangGroupInfo.LastScheduleTime = time.Now()
 
 	gang := &Gang{}
+	gang.GangGroupInfo = NewGangGroupInfo("", nil)
 	gang.Children = make(map[string]*corev1.Pod)
 	gang.SetGangGroupInfo(gangGroupInfo)
 
@@ -124,9 +138,11 @@ func TestInitPodLastScheduleTime_GetPodLastScheduleTime_ResetPodLastScheduleTime
 
 func TestScheduleCycleRelated(t *testing.T) {
 	gangGroupInfo := NewGangGroupInfo("aa_bb", []string{"aa", "bb"})
+	gangGroupInfo.SetInitialized()
 	gangGroupInfo.LastScheduleTime = time.Now()
 
 	gang := &Gang{}
+	gang.GangGroupInfo = NewGangGroupInfo("", nil)
 	gang.Name = "aa"
 	gang.SetGangGroupInfo(gangGroupInfo)
 	gangGroupInfo.GangTotalChildrenNumMap["aa"] = 1

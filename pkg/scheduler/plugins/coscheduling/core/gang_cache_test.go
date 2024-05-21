@@ -27,13 +27,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
-	fakepgclientset "sigs.k8s.io/scheduler-plugins/pkg/generated/clientset/versioned/fake"
-	pgformers "sigs.k8s.io/scheduler-plugins/pkg/generated/informers/externalversions"
 
 	"github.com/koordinator-sh/koordinator/apis/extension"
+	"github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/apis/scheduling/v1alpha1"
+	fakepgclientset "github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/generated/clientset/versioned/fake"
+	pgformers "github.com/koordinator-sh/koordinator/apis/thirdparty/scheduler-plugins/pkg/generated/informers/externalversions"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config"
-	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config/v1beta2"
+	"github.com/koordinator-sh/koordinator/pkg/scheduler/apis/config/v1beta3"
 	"github.com/koordinator-sh/koordinator/pkg/scheduler/plugins/coscheduling/util"
 )
 
@@ -44,10 +44,10 @@ var fakeTimeNowFn = func() time.Time {
 }
 
 func getTestDefaultCoschedulingArgs(t *testing.T) *config.CoschedulingArgs {
-	var v1beta2args v1beta2.CoschedulingArgs
-	v1beta2.SetDefaults_CoschedulingArgs(&v1beta2args)
+	var v1beta3args v1beta3.CoschedulingArgs
+	v1beta3.SetDefaults_CoschedulingArgs(&v1beta3args)
 	var args config.CoschedulingArgs
-	err := v1beta2.Convert_v1beta2_CoschedulingArgs_To_config_CoschedulingArgs(&v1beta2args, &args, nil)
+	err := v1beta3.Convert_v1beta3_CoschedulingArgs_To_config_CoschedulingArgs(&v1beta3args, &args, nil)
 	assert.NoError(t, err)
 	return &args
 }
@@ -100,6 +100,7 @@ func TestGangCache_OnPodAdd(t *testing.T) {
 					WaitTime:        0,
 					GangGroupId:     "default/test",
 					GangGroup:       []string{"default/test"},
+					GangGroupInfo:   NewGangGroupInfo("", nil),
 					Mode:            extension.GangModeStrict,
 					GangFrom:        GangFromPodAnnotation,
 					GangMatchPolicy: extension.GangMatchPolicyOnceSatisfied,
@@ -519,9 +520,13 @@ func TestGangCache_OnPodAdd(t *testing.T) {
 					continue
 				}
 
-				gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
-				gang.GangGroupInfo.ChildrenLastScheduleTime[util.GetId(pod.Namespace, pod.Name)] =
-					gang.GangGroupInfo.LastScheduleTime
+				if gangCache.gangItems[gangId].GangGroupInfo.IsInitialized() {
+					gang.GangGroupInfo.SetInitialized()
+
+					gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
+					gang.GangGroupInfo.ChildrenLastScheduleTime[util.GetId(pod.Namespace, pod.Name)] =
+						gang.GangGroupInfo.LastScheduleTime
+				}
 			}
 
 			assert.Equal(t, tt.wantCache, gangCache.gangItems)
@@ -676,9 +681,13 @@ func TestGangCache_OnPodUpdate(t *testing.T) {
 					continue
 				}
 
-				gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
-				gang.GangGroupInfo.ChildrenLastScheduleTime[util.GetId(pod.Namespace, pod.Name)] =
-					gang.GangGroupInfo.LastScheduleTime
+				if gangCache.gangItems[gangId].GangGroupInfo.IsInitialized() {
+					gang.GangGroupInfo.SetInitialized()
+
+					gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
+					gang.GangGroupInfo.ChildrenLastScheduleTime[util.GetId(pod.Namespace, pod.Name)] =
+						gang.GangGroupInfo.LastScheduleTime
+				}
 			}
 
 			assert.Equal(t, tt.wantCache, gangCache.gangItems)
@@ -854,11 +863,9 @@ func TestGangCache_OnPodDelete(t *testing.T) {
 				}
 
 				gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
-			}
 
-			for _, gang := range tt.wantCache {
-				if gangCache.gangItems[gang.Name].GangGroupInfo == nil {
-					gangCache.gangItems[gang.Name].GangGroupInfo = NewGangGroupInfo("", nil)
+				if gangCache.gangItems[gangId].GangGroupInfo.IsInitialized() {
+					gang.GangGroupInfo.SetInitialized()
 				}
 			}
 
@@ -1004,6 +1011,10 @@ func TestGangCache_OnPodGroupAdd(t *testing.T) {
 				if gang.GangGroupInfo != nil {
 					gang.GangGroupInfo.GangTotalChildrenNumMap[gang.Name] = gang.TotalChildrenNum
 				}
+
+				if gangCache.gangItems[gang.Name].GangGroupInfo.IsInitialized() {
+					gang.GangGroupInfo.SetInitialized()
+				}
 			}
 
 			for k, v := range tt.wantCache {
@@ -1122,6 +1133,11 @@ func TestGangCache_OnGangDelete(t *testing.T) {
 
 	cacheGang := cache.getGangFromCacheByGangId("default/gangb", false)
 	wantedGang.GangGroupId = util.GetGangGroupId(wantedGang.GangGroup)
+
+	if cacheGang.GangGroupInfo.IsInitialized() {
+		wantedGang.GangGroupInfo.SetInitialized()
+	}
+
 	assert.Equal(t, wantedGang, cacheGang)
 }
 
